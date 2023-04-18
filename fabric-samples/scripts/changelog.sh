@@ -1,9 +1,4 @@
-#!/bin/sh
-#
-# Copyright IBM Corp. All Rights Reserved.
-#
-# SPDX-License-Identifier: Apache-2.0
-#
+
 
 cat > CHANGELOG.new << EOF
 ## "${2}"

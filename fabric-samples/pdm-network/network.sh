@@ -1,9 +1,5 @@
 #!/bin/bash
 #
-# Copyright IBM Corp All Rights Reserved
-#
-# SPDX-License-Identifier: Apache-2.0
-#
 
 # This script brings up a Hyperledger Fabric network for testing smart contracts
 # and applications. The test network consists of two organizations with one

@@ -5,7 +5,7 @@ source scriptUtils.sh
 CHANNEL_NAME=${1:-"mychannel"}
 CC_NAME=${2:-"basic"}
 CC_SRC_PATH=${3:-"NA"}
-CC_SRC_LANGUAGE=${4:-"go"}
+CC_SRC_LANGUAGE=${4:-"javascript"}
 CC_VERSION=${5:-"1.0"}
 CC_SEQUENCE=${6:-"1"}
 CC_INIT_FCN=${7:-"NA"}
