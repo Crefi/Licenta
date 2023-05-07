@@ -8,18 +8,25 @@ Seteaza path-ul pentru go :
 
 1. Instaleaza fabric-samples
 $ curl -sSL https://bit.ly/2ysbOFE | bash -s
+Daca sunt probleme de la ultimele versiuni atunci :
+Docker images to version 2.4.9 for fabric and version 1.5.5 for fabric-ca.
+
 2. Daca nu ai directorul de bin in proiect adauga-l
 2. Intra in directorul de pdm network
 cd ../fabric-samples/pdm-network
 3. Creeaza network-ul si canalul
 ./network.sh createChannel -ca -s couchdb
 4. Da deploy la modelul de chaincode
-./network.sh deployCC -ccn basic -ccp ../asset-transfer-basic/chaincode-go -ccl go
+./network.sh deployCC -ccn basic -ccp ../chaincode-go -ccl go
 
-
-5. Opreste network-ul :
+In caz ca lipseste go.mod sau dependency:
+go mod init go.mod
+go get github.com/hyperledger/fabric-contract-api-go/contractapi
+5.0 : go to web-app server
+5.  Run this :  node registerHospital1Admin.js
+                node registerHospital2Admin.js
+6. Opreste network-ul :
 ./network.sh down
-
 
 
 Comenzi docker:

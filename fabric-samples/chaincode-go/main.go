@@ -1,223 +1,642 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"strconv"
-	"time"
+    "encoding/json"
+    "fmt"
+    "strconv"
+    "github.com/hyperledger/fabric-contract-api-go/contractapi"
+  
 
-	"github.com/hyperledger/fabric-contract-api-go/contractapi"
-	"github.com/hyperledger/fabric/core/chaincode/shim"
-	pb "github.com/hyperledger/fabric/protos/peer"
-
-	"/home/alex/Licenta/fabric-samples/chaincode-go/Patient.go"
-	"/home/alex/Licenta/fabric-samples/chaincode-go/Doctor.go"
 )
 
-
-// EHRContract implements the smart contract for managing electronic health records
-type EHRContract struct {
-	contractapi.Contract
+type RecordContract struct {
+    contractapi.Contract
 }
 
-// EHR represents an electronic health record
-type EHR struct {
-	ID           string    `json:"id"`
-	PatientID    string    `json:"patientID"`
-	DoctorID     string    `json:"doctorID"`
-	Description  string    `json:"description"`
-	CreatedAt    time.Time `json:"createdAt"`
-	UpdatedAt    time.Time `json:"updatedAt"`
+type Record struct {
+    PatientId                  string   `json:"PatientId"`
+    Address                    string   `json:"Address"`
+    Telephone                  string   `json:"Telephone"`
+    HealthRecordId             string   `json:"HealthRecordId"`
+    Diagnosis                  string   `json:"Diagnosis"`
+    Medication                 string   `json:"Medication"`
+    DoctorAuthorizationList    []string `json:"DoctorAuthorizationList"`
+    OrganisationAuthorizationList []string `json:"OrganisationAuthorizationList"`
 }
 
-
-// Init of the chaincode
-// This function is called only one when the chaincode is instantiated.
-// So the goal is to prepare the ledger to handle future requests.
-func (t *EHRContract) Init(stub shim.ChaincodeStubInterface) pb.Response {
-	fmt.Println("########### EHRContract  Init ###########")
-
-	// Get the function and arguments from the request
-	function, _ := stub.GetFunctionAndParameters()
-
-	// Check if the request is the init function
-	if function != "init" {
-		return shim.Error("Unknown function call")
-	}
-
-	// Return a successful message
-	return shim.Success(nil)
-}
-
-// Invoke of the chaincode
-/// Invoke processes the requests
-func (t *EHRContract) Invoke(ctx contractapi.TransactionContextInterface) (interface{}, error) {
-	fmt.Println("########### EHRContract Invoke ###########")
-
-	function, args := ctx.GetStub().GetFunctionAndParameters()
-
-	switch function {
-	case "createEHR":
-		return t.createEHR(ctx, args)
-	case "getEHR":
-		return t.getEHR(ctx, args)
-	case "updateEHR":
-		return t.updateEHR(ctx, args)
-	case "query":
-		return t.query(ctx, args)
-	default:
-		return nil, errors.New("unknown function call")
-	}
-}
-
-
-		// Create a new EHR
-func (t *EHRContract) createEHR(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-    if len(args) != 5 {
-        return shim.Error("Incorrect number of arguments. Expecting 5")
+func (rc *RecordContract) InitPatientLedger(ctx contractapi.TransactionContextInterface) error {
+    records := []Record{
+        {
+            PatientId: "Patient1",
+            Address: "A1",
+            Telephone: "071234",
+            HealthRecordId: "EHR1",
+            Diagnosis: "D1",
+            Medication: "M1",
+            DoctorAuthorizationList: []string{"Doc1"},
+            OrganisationAuthorizationList: []string{"Hospital1"},
+        },
+        {
+            PatientId: "Patient2",
+            Address: "A1",
+            Telephone: "0712345",
+            HealthRecordId: "EHR2",
+            Diagnosis: "D2",
+            Medication: "M2",
+            DoctorAuthorizationList: []string{"Doc2"},
+            OrganisationAuthorizationList: []string{"Hospital2"},
+        },
+        {
+            PatientId: "Patient3",
+            Address: "A3",
+            Telephone: "07123456",
+            HealthRecordId: "EHR3",
+            Diagnosis: "D3",
+            Medication: "M3",
+            DoctorAuthorizationList: []string{"Doc1","Doc2"},
+            OrganisationAuthorizationList: []string{"Hospital1","Hospital2"},
+        },
     }
 
-	id := args[0]
-	patientID := args[1]
-	doctorID := args[2]
-	description := args[3]
+    for _, record := range records {
+        recordJSON, err := json.Marshal(record)
+        if err != nil {
+            return err
+        }
 
-		// Create a new EHR
-	ehr := EHR{
-		ID:          args[0],
-		PatientID:   args[1],
-		DoctorID:    args[2],
-		Description: args[3],
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+        err = ctx.GetStub().PutState(record.PatientId, recordJSON)
+        if err != nil {
+            return err
+        }
+
+        fmt.Printf("Record %s initialized\n", record.PatientId)
+    }
+
+    return nil
+}
+
+func (rc *RecordContract) CreateRecord(ctx contractapi.TransactionContextInterface, userObjJSON string) (*Record, error) {
+    userObj := struct {
+        PatientId string `json:"patientId"`
+        Address string `json:"address"`
+        Telephone string `json:"telephone"`
+        Diagnosis string `json:"diagnosis"`
+        Medication string `json:"medication"`
+        DoctorId string `json:"doctorId"`
+    }{}
+
+    err := json.Unmarshal([]byte(userObjJSON), &userObj)
+    if err != nil {
+        return nil, err
+    }
+
+    exists, err := rc.RecordExists(ctx, userObj.PatientId)
+    if err != nil {
+        return nil, err
+    }
+
+    if exists {
+        return nil, fmt.Errorf("The record %s already exists", userObj.PatientId)
+    }
+
+	record := Record{
+        PatientId: userObj.PatientId,
+        Address: userObj.Address,
+        Telephone: userObj.Telephone,
+		Diagnosis: userObj.Diagnosis,
+		Medication: userObj.Medication,
+		DoctorAuthorizationList: []string{userObj.DoctorId},
+        OrganisationAuthorizationList: []string{},
 	}
 
-	// Convert EHR to bytes
-	ehrBytes, err := json.Marshal(ehr)
+	recordJSON, err := json.Marshal(record)
 	if err != nil {
-		return shim.Error("Failed to marshal EHR to JSON")
+		return nil, err
 	}
-
-	// Save EHR in the ledger
-	err = stub.PutState(args[0], ehrBytes)
-	if err != nil {
-		return shim.Error("Failed to save EHR in the ledger")
-	}
-
-	return shim.Success(nil)
-}
-
-
-// ==========================================================================================
-// updateEHR 
-// ==========================================================================================
-func updateEHR(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 5 {
-	return shim.Error("Incorrect number of arguments. Expecting 5")
-	}
-ehrBytes, err := stub.GetState(args[0])
-if err != nil {
-	return shim.Error("Failed to retrieve EHR from the ledger")
-}
-if ehrBytes == nil {
-	return shim.Error("EHR not found in the ledger")
-}
-
-// Convert EHR bytes to EHR struct
-var ehr EHR
-err = json.Unmarshal(ehrBytes, &ehr)
-if err != nil {
-	return shim.Error("Failed to unmarshal EHR bytes to EHR struct")
-}
-
-// Update EHR struct
-ehr.PatientID = args[1]
-ehr.DoctorID = args[2]
-ehr.Description = args[3]
-ehr.UpdatedAt = time.Now()
-
-// Convert EHR to bytes
-ehrBytes, err = json.Marshal(ehr)
-if err != nil {
-	return shim.Error("Failed to marshal EHR to JSON")
-}
-
-// Save updated EHR in the ledger
-err = stub.PutState(args[0], ehrBytes)
-if err != nil {
-	return shim.Error("Failed to save updated EHR in the ledger")
-}
-
-return shim.Success(nil)
-}
-
-
-// ==========================================================================================
-// getEHR : get the EHR object by ID - Auxiliary function
-// ==========================================================================================
-func getEHR(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 1 {
-	return shim.Error("Incorrect number of arguments. Expecting 1")
-	}
-	ehrBytes, err := stub.GetState(args[0])
-	if err != nil {
-		return shim.Error("Failed to retrieve EHR from the ledger")
-	}
-	if ehrBytes == nil {
-		return shim.Error("EHR not found in the ledger")
-	}
-
-	// Convert EHR bytes to EHR struct
-	var ehr EHR
-	err = json.Unmarshal(ehrBytes, &ehr)
-	if err != nil {
-		return shim.Error("Failed to unmarshal EHR bytes to EHR struct")
-	}
-
-	// Convert EHR struct to JSON bytes
-	ehrJSON, err := json.Marshal(ehr)
-	if err != nil {
-		return shim.Error("Failed to marshal EHR struct to JSON bytes")
-	}
-
-	return shim.Success(ehrJSON)
-	}
-
-
-	// query
-	// Every readonly functions in the ledger will be here
-	func (t *EHRContract) query(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-		fmt.Println("########### EHRContract query ###########")
 	
-		// Check whether the number of arguments is sufficient
-		if len(args) < 2 {
-			return shim.Error("The number of arguments is insufficient.")
+	err = ctx.GetStub().PutState(record.PatientId, recordJSON)
+	if err != nil {
+		return nil, err
+	}
+	
+	return &record, nil
+}
+
+func (rc *RecordContract) UpdateRecord(ctx contractapi.TransactionContextInterface, userObjJSON string) (*Record, error) {
+	userObj := struct {
+		PatientId string `json:"patientId"`
+        Address string `json:"address"`
+        Telephone string `json:"telephone"`
+        Diagnosis string `json:"diagnosis"`
+        Medication string `json:"medication"`
+        DoctorId string `json:"doctorId"`
+	}{}
+
+	err := json.Unmarshal([]byte(userObjJSON), &userObj)
+	if err != nil {
+		return nil, err
+	}
+	
+	exists, err := rc.RecordExists(ctx, userObj.PatientId)
+	if err != nil {
+		return nil, err
+	}
+	
+	if !exists {
+		return nil, fmt.Errorf("The record %s does not exist", userObj.PatientId)
+	}
+	
+	
+	
+	record := Record{
+		PatientId: userObj.PatientId,
+		Address: userObj.Address,
+		Telephone: userObj.Telephone,
+		Diagnosis: userObj.Diagnosis,
+		Medication: userObj.Medication,
+		DoctorAuthorizationList: []string{userObj.DoctorId},
+	}
+	
+	recordJSON, err := json.Marshal(record)
+	if err != nil {
+		return nil, err
+	}
+	
+	err = ctx.GetStub().PutState(record.PatientId, recordJSON)
+	if err != nil {
+		return nil, err
+	}
+	
+	return &record, nil
+}
+
+
+func (rc *RecordContract) RecordExists(ctx contractapi.TransactionContextInterface, patientId string) (bool, error) {
+	recordJSON, err := ctx.GetStub().GetState(patientId)
+	if err != nil {
+		return false, err
 		}
+		
+	return recordJSON != nil, nil
+
+}
+
+func (rc *RecordContract) GetRecord(ctx contractapi.TransactionContextInterface, patientId string) (*Record, error) {
+	recordJSON, err := ctx.GetStub().GetState(patientId)
+	if err != nil {
+	return nil, err
+	}
+	if recordJSON == nil {
+		return nil, fmt.Errorf("The record %s does not exist", patientId)
+	}
 	
-		// Like the Invoke function, we manage multiple type of query requests with the second argument.
-		// We also have only one possible argument: hello
-		if args[1] == "hello" {
+	var record Record
+	err = json.Unmarshal(recordJSON, &record)
+	if err != nil {
+		return nil, err
+	}
 	
-			// Get the state of the value matching the key hello in the ledger
-			state, err := stub.GetState("hello")
-			if err != nil {
-				return shim.Error("Failed to get state of hello")
+	return &record, nil
+}
+
+func (rc *RecordContract) GetAllResults(ctx contractapi.TransactionContextInterface) ([]*Record, error) {
+	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
+	if err != nil {
+		return nil, err
+	}
+	defer resultsIterator.Close()
+
+	var records []*Record
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return nil, err
+		}
+
+		var record Record
+		err = json.Unmarshal(queryResponse.Value, &record)
+		if err != nil {
+			return nil, err
+		}
+
+		records = append(records, &record)
+	}
+
+	return records, nil
+}
+
+func (rc *RecordContract) GetRecordHistory(ctx contractapi.TransactionContextInterface, userObjStr string) (string, error) {
+    var userObj struct {
+        PatientID string `json:"patientId"`
+    }
+
+    if err := json.Unmarshal([]byte(userObjStr), &userObj); err != nil {
+        return "", err
+    }
+
+    resultsIterator, err := ctx.GetStub().GetHistoryForKey(userObj.PatientID)
+    if err != nil {
+        return "", err
+    }
+    defer resultsIterator.Close()
+
+    var allResults []*Record
+    for resultsIterator.HasNext() {
+        queryResponse, err := resultsIterator.Next()
+        if err != nil {
+            return "", err
+        }
+
+        var record Record
+        err = json.Unmarshal(queryResponse.Value, &record)
+        if err != nil {
+            return "", err
+        }
+
+        allResults = append(allResults, &record)
+    }
+
+    jsonResults, err := json.Marshal(allResults)
+    if err != nil {
+        return "", err
+    }
+
+    return string(jsonResults), nil
+}
+func (rc *RecordContract) GetAllRecords(ctx contractapi.TransactionContextInterface) ([]*Record, error) {
+    var records []*Record
+    // range query with empty string for startKey and endKey does an open-ended query of all records in the chaincode namespace.
+    resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
+    if err != nil {
+        return nil, fmt.Errorf("failed to read from world state: %v", err)
+    }
+    defer resultsIterator.Close()
+
+    for resultsIterator.HasNext() {
+        queryResponse, err := resultsIterator.Next()
+        if err != nil {
+            return nil, fmt.Errorf("failed to read from iterator: %v", err)
+        }
+
+        var record Record
+        err = json.Unmarshal(queryResponse.Value, &record)
+        if err != nil {
+            return nil, fmt.Errorf("failed to unmarshal record: %v", err)
+        }
+        records = append(records, &record)
+    }
+
+    return records, nil
+}
+
+
+
+
+func (rc *RecordContract) AddDoctorAuthorization(ctx contractapi.TransactionContextInterface, patientId string, doctorId string) error {
+    record, err := rc.GetRecord(ctx, patientId)
+    if err != nil {
+        return err
+    }
+
+    record.DoctorAuthorizationList = append(record.DoctorAuthorizationList, doctorId)
+
+    recordJSON, err := json.Marshal(record)
+    if err != nil {
+        return err
+    }
+
+    return ctx.GetStub().PutState(patientId, recordJSON)
+}
+
+func (rc *RecordContract) TransferRecord(ctx contractapi.TransactionContextInterface, fromDoctorId string, patientId string, toDoctorId string, message string) error {
+    record, err := rc.GetRecord(ctx, patientId)
+    if err != nil {
+        return err
+    }
+
+    authorized := false
+    for _, doctorId := range record.DoctorAuthorizationList {
+        if doctorId == fromDoctorId {
+            authorized = true
+            break
+        }
+    }
+
+    if !authorized {
+        return fmt.Errorf("The doctor %s is not authorized to transfer this patient's record", fromDoctorId)
+    }
+
+    transfer := struct {
+        FromDoctorId string `json:"fromDoctorId"`
+        ToDoctorId   string `json:"toDoctorId"`
+        Message      string `json:"message"`
+        Approved     bool   `json:"approved"`
+    }{
+        FromDoctorId: fromDoctorId,
+        ToDoctorId:   toDoctorId,
+        Message:      message,
+        Approved:     false,
+    }
+
+    transferJSON, err := json.Marshal(transfer)
+    if err != nil {
+        return err
+    }
+
+    err = ctx.GetStub().PutState(patientId+"_"+fromDoctorId, transferJSON)
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
+func (rc *RecordContract) ApproveTransfer(ctx contractapi.TransactionContextInterface, patientId string, fromDoctorId string) error {
+    transferJSON, err := ctx.GetStub().GetState(patientId+"_"+fromDoctorId)
+    if err != nil {
+        return err
+    }
+
+    if transferJSON == nil {
+        return fmt.Errorf("No transfer request found for patient %s and doctor %s", patientId, fromDoctorId)
+    }
+
+    transfer := struct {
+        FromDoctorId string `json:"fromDoctorId"`
+        ToDoctorId   string `json:"toDoctorId"`
+        Message      string `json:"message"`
+        Approved     bool   `json:"approved"`
+    }{}
+
+    err = json.Unmarshal(transferJSON, &transfer)
+    if err != nil {
+        return err
+    }
+
+    if transfer.Approved {
+        return fmt.Errorf("Transfer request for patient %s and doctor %s has already been approved", patientId, fromDoctorId)
+	}
+
+	record, err := rc.GetRecord(ctx, patientId)
+	if err != nil {
+		return err
+	}
+	
+	authorized := false
+	for _, doctorId := range record.DoctorAuthorizationList {
+		if doctorId == fromDoctorId {
+			authorized = true
+			break
+		}
+	}
+	
+	if !authorized {
+		return fmt.Errorf("The doctor %s is not authorized to approve the transfer of this patient's record", fromDoctorId)
+	}
+	
+	transfer.Approved = true
+	transferJSON, err = json.Marshal(transfer)
+	if err != nil {
+		return err
+	}
+	
+	err = ctx.GetStub().PutState(patientId+"_"+fromDoctorId, transferJSON)
+	if err != nil {
+		return err
+	}
+	
+	// Retrieve the transfer request again to make sure it was updated successfully
+	transferJSON, err = ctx.GetStub().GetState(patientId+"_"+fromDoctorId)
+	if err != nil {
+		return err
+	}
+	
+	err = json.Unmarshal(transferJSON, &transfer)
+	if err != nil {
+		return err
+	}
+	
+	if !transfer.Approved {
+		return fmt.Errorf("Failed to approve transfer request for patient %s and doctor %s", patientId, fromDoctorId)
+	}
+	
+	// Remove the doctor from the authorization list
+	for i, doctorId := range record.DoctorAuthorizationList {
+		if doctorId == fromDoctorId {
+			record.DoctorAuthorizationList = append(record.DoctorAuthorizationList[:i], record.DoctorAuthorizationList[i+1:]...)
+			break
+		}
+	}
+	
+	// Add the new doctor to the authorization list
+	record.DoctorAuthorizationList = append(record.DoctorAuthorizationList, transfer.ToDoctorId)
+	
+	recordJSON, err := json.Marshal(record)
+	if err != nil {
+		return err
+	}
+	
+	return ctx.GetStub().PutState(patientId, recordJSON)
+}
+func (rc *RecordContract) UpdatePatientInfo(ctx contractapi.TransactionContextInterface, userObj string) (string, error) {
+    var err error
+    var updatedRecordJSON []byte
+
+    // Parse userObj to get patientId, address and telephone
+    var user map[string]interface{}
+    err = json.Unmarshal([]byte(userObj), &user)
+    if err != nil {
+        return "", err
+    }
+
+    patientId := user["patientId"].(string)
+    address := user["address"].(string)
+    telephone, err := strconv.Atoi(user["telephone"].(string))
+    if err != nil {
+        return "", err
+    }
+
+    // Get state from the ledger
+    recordJSON, err := ctx.GetStub().GetState(patientId)
+    if err != nil {
+        return "", fmt.Errorf("Failed to read from world state: %v", err)
+    }
+
+    if recordJSON == nil {
+        return "", fmt.Errorf("The Record %s does not exist", patientId)
+    }
+
+    // Parse recordJSON to get the existing record
+    var existingRecord map[string]interface{}
+    err = json.Unmarshal(recordJSON, &existingRecord)
+    if err != nil {
+        return "", err
+    }
+
+    // Update the existing record
+    existingRecord["Address"] = address
+    existingRecord["Telephone"] = telephone
+
+    // Put the updated record back in the ledger
+    updatedRecordJSON, err = json.Marshal(existingRecord)
+    if err != nil {
+        return "", err
+    }
+
+    err = ctx.GetStub().PutState(patientId, updatedRecordJSON)
+    if err != nil {
+        return "", fmt.Errorf("Failed to write to world state. %v", err)
+    }
+
+    return string(updatedRecordJSON), nil
+}
+
+
+func (rc *RecordContract) GrantAccess(ctx contractapi.TransactionContextInterface, userObj string) (string, error) {
+    var err error
+    var updatedRecordJSON []byte
+
+    // Parse userObj to get patientId and doctorId
+    var user map[string]interface{}
+    err = json.Unmarshal([]byte(userObj), &user)
+    if err != nil {
+        return "", err
+    }
+
+    patientId := user["patientId"].(string)
+    doctorId := user["doctorId"].(string)
+
+    // Get state from the ledger
+    recordJSON, err := ctx.GetStub().GetState(patientId)
+    if err != nil {
+        return "", fmt.Errorf("Failed to read from world state: %v", err)
+    }
+
+    if recordJSON == nil {
+        return "", fmt.Errorf("The Record %s does not exist", patientId)
+    }
+
+    // Parse recordJSON to get the existing record
+    var existingRecord map[string]interface{}
+    err = json.Unmarshal(recordJSON, &existingRecord)
+    if err != nil {
+        return "", err
+    }
+
+    // Update the doctor authorization list
+    authList := existingRecord["DoctorAuthorizationList"].([]interface{})
+    authList = append(authList, doctorId)
+    existingRecord["DoctorAuthorizationList"] = authList
+
+    // Put the updated record back in the ledger
+    updatedRecordJSON, err = json.Marshal(existingRecord)
+    if err != nil {
+        return "", err
+    }
+
+    err = ctx.GetStub().PutState(patientId, updatedRecordJSON)
+    if err != nil {
+        return "", fmt.Errorf("Failed to write to world state. %v", err)
+    }
+
+    return string(updatedRecordJSON), nil
+}
+
+// RevokeAccess removes the authorization of a doctor or organization from accessing a patient's record.
+func (rc *RecordContract) RevokeAccess(ctx contractapi.TransactionContextInterface, userObjJSON string) error {
+	// Parse the incoming JSON data into a struct that we can use
+	userObj := struct {
+		PatientId        string `json:"patientId"`
+		AuthorizedEntity string `json:"authorizedEntity"`
+	}{}
+
+	err := json.Unmarshal([]byte(userObjJSON), &userObj)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal user object JSON: %v", err)
+	}
+
+	// Check if the record exists before trying to revoke access
+	exists, err := rc.RecordExists(ctx, userObj.PatientId)
+	if err != nil {
+		return fmt.Errorf("failed to check if record exists: %v", err)
+	}
+	if !exists {
+		return fmt.Errorf("the record %s does not exist", userObj.PatientId)
+	}
+
+	// Get the record from the world state and parse it into a struct that we can use
+	recordBytes, err := ctx.GetStub().GetState(userObj.PatientId)
+	if err != nil {
+		return fmt.Errorf("failed to read record %s from world state: %v", userObj.PatientId, err)
+	}
+	var record Record
+	err = json.Unmarshal(recordBytes, &record)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal record JSON data: %v", err)
+	}
+
+	// Check if the authorized entity is a doctor or organization, and remove it from the appropriate list
+	isDoctor := false
+	for i, doctorId := range record.DoctorAuthorizationList {
+		if doctorId == userObj.AuthorizedEntity {
+			record.DoctorAuthorizationList = append(record.DoctorAuthorizationList[:i], record.DoctorAuthorizationList[i+1:]...)
+			isDoctor = true
+			break
+		}
+	}
+	if !isDoctor {
+		for i, orgId := range record.OrganisationAuthorizationList {
+			if orgId == userObj.AuthorizedEntity {
+				record.OrganisationAuthorizationList = append(record.OrganisationAuthorizationList[:i], record.OrganisationAuthorizationList[i+1:]...)
+				break
 			}
-	
-			// Return this value in response
-			return shim.Success(state)
 		}
-	
-		// If the arguments given don’t match any function, we return an error
-		return shim.Error("Unknown query action, check the second argument.")
 	}
-	
+
+	// Convert the updated record to JSON format and save it to the world state
+	recordBytes, err = json.Marshal(record)
+	if err != nil {
+		return fmt.Errorf("failed to marshal record: %v", err)
+	}
+	err = ctx.GetStub().PutState(userObj.PatientId, recordBytes)
+	if err != nil {
+		return fmt.Errorf("failed to put record in the world state: %v", err)
+	}
+
+	return nil
+}
+
+
+func (rc *RecordContract) CheckAuthorization(ctx contractapi.TransactionContextInterface, recordJSON []byte, doctorId string) (bool, error) {
+    updatedRecord := new(Record)
+    err := json.Unmarshal(recordJSON, updatedRecord)
+    if err != nil {
+        return false, fmt.Errorf("failed to unmarshal record: %v", err)
+    }
+    authrozationList := updatedRecord.DoctorAuthorizationList
+    for _, id := range authrozationList {
+        if id == doctorId {
+            return true, nil
+        }
+    }
+    return false, nil
+}
+
 
 func main() {
-	// Start the chaincode and make it ready for futures requests
-	err := shim.Start(new(EHRContract))
+		// Start the chaincode and make it ready for futures requests
+	recordContract := new(RecordContract)
+	chaincode, err := contractapi.NewChaincode(recordContract)
 	if err != nil {
-		fmt.Printf("Error starting EHRContract chaincode: %s", err)
+		fmt.Printf("Error creating record chaincode: %s", err.Error())
+		return
+	}
+	
+	if err := chaincode.Start(); err != nil {
+		fmt.Printf("Error starting record chaincode: %s", err.Error())
 	}
 }
+
+
+
+
