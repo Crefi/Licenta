@@ -1,42 +1,58 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-function RevokeAccess() {
-  const [doctorUsername, setDoctorUsername] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+const RevokeAccess = () => {
+  const [id, setId] = useState('');
+  const [patientId, setPatientId] = useState('');
+  const [doctorId, setDoctorId] = useState('');
+  const [orgId, setOrg] = useState('');
+  const [message, setMessage] = useState('');
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setErrorMessage('');
-    setSuccessMessage('');
-    const token = localStorage.getItem('accessToken');
+
     try {
-      await axios.post('http://localhost:5001/revokeAccess', {
-        doctorUsername: doctorUsername,
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await axios.post('/revokeAccess', {
+        id,
+        patientId,
+        doctorId,
+        orgId,
       });
-      setSuccessMessage('Access revoked successfully!');
+      setMessage(response.data);
     } catch (error) {
-      setErrorMessage(error.response.data.error);
+      setMessage(error.response.data);
     }
-  }
+  };
 
   return (
     <div>
-      <h1>Revoke Access</h1>
+      <h2>Grant Access</h2>
       <form onSubmit={handleSubmit}>
-        <div>
-          <label>Doctor's username:</label>
-          <input type="text" onChange={(e) => setDoctorUsername(e.target.value)} />
-        </div>
-        <button type="submit">Revoke Access</button>
+      <label>
+          Patient role:
+          <input type="text" value={id} onChange={(e) => setId(e.target.value)} />
+        </label>
+        <br />
+        <label>
+          Patient ID:
+          <input type="text" value={patientId} onChange={(e) => setPatientId(e.target.value)} />
+        </label>
+        <br />
+        <label>
+          Doctor ID:
+          <input type="text" value={doctorId} onChange={(e) => setDoctorId(e.target.value)} />
+        </label>
+        <br />
+        <label>
+          Patient organization:
+          <input type="text" value={orgId} onChange={(e) => setOrg(e.target.value)} />
+        </label>
+        <br />
+        <button type="submit">Grant Access</button>
       </form>
-      {errorMessage && <p>{errorMessage}</p>}
-      {successMessage && <p>{successMessage}</p>}
+      <p>{message}</p>
     </div>
   );
-}
+};
 
 export default RevokeAccess;

@@ -1,0 +1,50 @@
+
+
+.h2-history {
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+  
+
+  .label-history {
+    display: block;
+    margin-bottom: 5px;
+  }
+  
+  .input-history {
+    width: 200px;
+    height: 25px;
+    margin-bottom: 10px;
+  }
+  
+  .button-history {
+    padding: 5px 10px;
+    background-color: #05fa12;
+    color: #000000;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .table-history {
+    width: 100%;
+    border-collapse: collapse;
+    border: 2px solid #000000; 
+  }
+  
+  .th-history,
+  .td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 2px solid #000000; 
+    border-color: #333333; 
+  }
+  
+  th-history {
+    font-weight: bold;
+    
+  }
+  
+  p {
+    margin: 10px 0;
+  }
+  

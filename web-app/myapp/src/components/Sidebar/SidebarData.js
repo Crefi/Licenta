@@ -3,41 +3,65 @@ import * as FaIcons from 'react-icons/fa';
 import * as AiIcons from 'react-icons/ai';
 import * as IoIcons from 'react-icons/io';
 
-export const SidebarData = [
-  {
-    title: 'Home',
-    path: '/',
-    icon: <AiIcons.AiFillHome />,
-    cName: 'side-nav-text'
-  },
-  {
-    title: 'Reports',
-    path: '/reports',
-    icon: <IoIcons.IoIosPaper />,
-    cName: 'side-nav-text'
-  },
-  {
-    title: 'Products',
-    path: '/products',
-    icon: <FaIcons.FaCartPlus />,
-    cName: 'side-nav-text'
-  },
-  {
-    title: 'Team',
-    path: '/team',
-    icon: <IoIcons.IoMdPeople />,
-    cName: 'side-nav-text'
-  },
-  {
-    title: 'Messages',
-    path: '/messages',
-    icon: <FaIcons.FaEnvelopeOpenText />,
-    cName: 'side-nav-text'
-  },
-  {
-    title: 'Support',
-    path: '/support',
-    icon: <IoIcons.IoMdHelpCircle />,
-    cName: 'side-nav-text'
+export const getSidebarData = (role) => {
+  let sidebarData = []; 
+  if (role === 'admin') {
+    sidebarData.push(
+      {
+        title: 'AdminDashboard',
+        path: '/admin-dashboard',
+        icon: <FaIcons.FaUser />,
+        cName: 'side-nav-text'
+      },
+      {
+        title: 'RegisterPatient',
+        path: '/registerPatient',
+        icon: <FaIcons.FaUser />,
+        cName: 'side-nav-text'
+      },
+      // Other admin-specific sidebar items
+    );
+  } else if (role === 'doctor') {
+    sidebarData.push(
+      {
+        title: 'DoctorDashboard',
+        path: '/doctor-Dashboard',
+        icon: <FaIcons.FaUserCircle />,
+        cName: 'side-nav-text'
+      },
+      
+    );
+    
+  } else if (role === 'patient') {
+    sidebarData.push(
+      {
+        title: 'PatientDashboard',
+        path: '/patient-dashboard',
+        icon: <FaIcons.FaUserCircle />,
+        cName: 'side-nav-text'
+      },
+      {
+        title: 'GetRecordHistory',
+        path: '/getRecordHistory',
+        icon: <FaIcons.FaUserCircle />,
+        cName: 'side-nav-text'
+      },
+      {
+        title: 'GrantAccess',
+        path: '/grantAccess',
+        icon: <FaIcons.FaUserCircle />,
+        cName: 'side-nav-text'
+      },
+      {
+        title: 'ReadAllPatientData',
+        path: '/readAllPatientData',
+        icon: <FaIcons.FaUserCircle />,
+        cName: 'side-nav-text'
+      },
+      // Other user-specific sidebar items
+    );
+    
   }
-];
+
+  return sidebarData;
+};

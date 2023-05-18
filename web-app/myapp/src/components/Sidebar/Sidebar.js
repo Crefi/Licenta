@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import * as FaIcons from 'react-icons/fa';
 import * as AiIcons from 'react-icons/ai';
 import { Link } from 'react-router-dom';
-import { SidebarData } from './SidebarData';
-import './Sidebar.css';
 import { IconContext } from 'react-icons';
+import { getSidebarData } from './SidebarData';
 
-function Sidebar() {
+import './Sidebar.css';
+
+function Sidebar({ role }) {
   const [sidebar, setSidebar] = useState(false);
+  const sidebarData = getSidebarData(role);
 
   const showSidebar = () => setSidebar(!sidebar);
 
@@ -26,7 +28,7 @@ function Sidebar() {
                 <AiIcons.AiOutlineClose />
               </Link>
             </li>
-            {SidebarData.map((item, index) => {
+            {sidebarData.map((item, index) => {
               return (
                 <li key={index} className={item.cName}>
                   <Link to={item.path}>

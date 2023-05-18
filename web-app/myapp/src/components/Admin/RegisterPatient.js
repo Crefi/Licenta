@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import Sidebar from '../Sidebar/Sidebar';
 
 const RegisterPatient = () => {
-  const [patientId, setPatientId] = useState('');
   const [id, setId] = useState('');
-  const [organization, setOrg] = useState('');
+  const [patientId, setPatientId] = useState('');
+  const [orgId, setOrg] = useState('');
   const [address, setAddress] = useState('');
   const [telephone, setTelephone] = useState('');
   const [diagnosis, setDiagnosis] = useState('');
   const [medication, setMedication] = useState('');
   const [doctorId, setDoctorId] = useState('');
-  const [role, setRole] = useState('');
-  const [username, setUsername] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleSubmit = async (event) => {
@@ -23,20 +22,19 @@ const RegisterPatient = () => {
         {
           id,
           patientId,
-          organization,
           address,
           telephone,
           diagnosis,
           medication,
           doctorId,
-          role,
-          username
+          orgId,
+    
         },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+        // {
+        //   headers: {
+        //     Authorization: `Bearer ${localStorage.getItem('token')}`,
+        //   },
+        // }
       );
 
       if (response.data.error) {
@@ -51,14 +49,34 @@ const RegisterPatient = () => {
 
   return (
     <div>
+      <Sidebar role={localStorage.getItem('role')} />
       <h1>Register Patient</h1>
       <form onSubmit={handleSubmit}>
+      <label>
+          Id:
+          <input
+            type="text"
+            value={id}
+            onChange={(event) => setId(event.target.value)}
+          />
+        </label>
+        <br></br>
         <label>
           Patient ID:
           <input
             type="text"
             value={patientId}
             onChange={(event) => setPatientId(event.target.value)}
+          />
+        </label>
+
+        <br />
+        <label>
+          Org:
+          <input
+            type="text"
+            value={orgId}
+            onChange={(event) => setOrg(event.target.value)}
           />
         </label>
         <br />
@@ -77,24 +95,6 @@ const RegisterPatient = () => {
             type="text"
             value={telephone}
             onChange={(event) => setTelephone(event.target.value)}
-          />
-        </label>
-        <br />
-        <label>
-          Org:
-          <input
-            type="text"
-            value={organization}
-            onChange={(event) => setOrg(event.target.value)}
-          />
-        </label>
-        <br />
-        <label>
-          Id:
-          <input
-            type="text"
-            value={id}
-            onChange={(event) => setId(event.target.value)}
           />
         </label>
         <br />
@@ -124,24 +124,7 @@ const RegisterPatient = () => {
             onChange={(event) => setDoctorId(event.target.value)}
           />
         </label>
-        <br />
-        <label>
-           Role:
-          <input
-            type="text"
-            value={role}
-            onChange={(event) => setRole(event.target.value)}
-          />
-        </label>
-        <br />
-        <label>
-           username:
-          <input
-            type="text"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-          />
-        </label>
+
         <br />
         <button type="submit">Submit</button>
       </form>

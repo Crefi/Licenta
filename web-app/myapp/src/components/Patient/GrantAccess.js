@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import Sidebar from '../Sidebar/Sidebar';
 
 const GrantAccess = () => {
+  const [id, setId] = useState('');
   const [patientId, setPatientId] = useState('');
   const [doctorId, setDoctorId] = useState('');
+  const [orgId, setOrg] = useState('');
   const [message, setMessage] = useState('');
 
   const handleSubmit = async (event) => {
@@ -11,8 +14,10 @@ const GrantAccess = () => {
 
     try {
       const response = await axios.post('/grantAccess', {
+        id,
         patientId,
         doctorId,
+        orgId,
       });
       setMessage(response.data);
     } catch (error) {
@@ -22,8 +27,14 @@ const GrantAccess = () => {
 
   return (
     <div>
+      <Sidebar role={localStorage.getItem('role')} />
       <h2>Grant Access</h2>
       <form onSubmit={handleSubmit}>
+      <label>
+          Patient role:
+          <input type="text" value={id} onChange={(e) => setId(e.target.value)} />
+        </label>
+        <br />
         <label>
           Patient ID:
           <input type="text" value={patientId} onChange={(e) => setPatientId(e.target.value)} />
@@ -32,6 +43,11 @@ const GrantAccess = () => {
         <label>
           Doctor ID:
           <input type="text" value={doctorId} onChange={(e) => setDoctorId(e.target.value)} />
+        </label>
+        <br />
+        <label>
+          Patient organization:
+          <input type="text" value={orgId} onChange={(e) => setOrg(e.target.value)} />
         </label>
         <br />
         <button type="submit">Grant Access</button>

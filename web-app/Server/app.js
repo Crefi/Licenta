@@ -12,9 +12,9 @@ const walletPath = path.join(__dirname, 'wallet')
 
 async function registerUser(userObj) {
   try {
-    const orgDetail = orgConst[userObj.org]
+    const orgDetail = orgConst[userObj.orgId]
 
-    const ccp = buildCCPHospital(userObj.org)
+    const ccp = buildCCPHospital(userObj.orgId)
     const caClient = buildCAClient(FabricCAServices, ccp, orgDetail.ca)
     const wallet = await buildWallet(Wallets, walletPath)
     await registerAndEnrollUser(caClient, wallet, orgDetail.msp, userObj, orgDetail.department)
@@ -27,7 +27,7 @@ async function registerUser(userObj) {
 
 async function connectNetwork(userObj) {
   try {
-    const ccp = buildCCPHospital(userObj.org)
+    const ccp = buildCCPHospital(userObj.orgId)
     const wallet = await buildWallet(Wallets, walletPath)
     const gateway = new Gateway()
     await gateway.connect(ccp, {
@@ -117,15 +117,6 @@ async function updatePatientInfo(userObj) {
 }
 
 
-async function updatePatientHealthRecord(userObj) {
-  try {
-    const result = await submitTransaction('UpdateRecord', userObj)
-    return result
-  } catch (error) {
-    console.error(`updatePatientData() --> Failed to update the record: ${error}`)
-    throw new Error(`Failed to update the record: ${error}`)
-  }
-}
 
 
 async function readPatientData(userObj) {
@@ -152,6 +143,18 @@ async function readAllPatientData(userObj) {
     throw new Error(`Failed to read all the current record: ${error}`)
   }
 }
+async function getAllRecords(userObj) {
+  try {
+    const result = await evaluateTransaction('GetAllRecords', userObj)
+    return result
+  } catch (error) {
+    console.error(`readAllPatientData() --> Failed to read all the current record: ${error}`)
+    throw new Error(`Failed to read all the current record: ${error}`)
+  }
+}
+
+
+
 
 // function to read the history of a record
 async function getRecordHistory(userObj) {
@@ -215,12 +218,12 @@ module.exports = {
   initLedger,
   connectNetwork,
   disconnectNetowrk,
-  updatePatientHealthRecord,
   readPatientData,
   readAllPatientData,
   getRecordHistory,
   updatePatientInfo,
   grantAccess,
+  getAllRecords,
   revokeAccess
 }
 

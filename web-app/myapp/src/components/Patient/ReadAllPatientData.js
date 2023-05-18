@@ -1,22 +1,22 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import './ReadAllPatientData.css';
 
-const ReadAllPatientData = () => {
-  const [patients, setPatients] = useState([]);
+function ReadAllPatientData() {
+  const [result, setResult] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.post(
-          "http://localhost:5001/readAllPatientData",
-          {
-            username: "admin", // Replace with your username
-            password: "adminpw", // Replace with your password
-          }
-        );
-        setPatients(response.data);
+        const userId = 'admin'; // Specify the desired user ID
+        const orgId = 'Hospital1'; // Specify the desired organization ID
+        const response = await axios.get('/getAllRecords', {
+          params: { id: userId, orgId: orgId } // Pass the 'id' and 'orgId' as query parameters
+        });
+        setResult(JSON.stringify(response.data, null, 2));
       } catch (error) {
         console.error(error);
+        setResult('Error retrieving patient records');
       }
     };
 
@@ -24,34 +24,11 @@ const ReadAllPatientData = () => {
   }, []);
 
   return (
-    <div>
-      <h1>All Patients</h1>
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>DOB</th>
-            <th>Gender</th>
-            <th>Email</th>
-            <th>Phone</th>
-          </tr>
-        </thead>
-        <tbody>
-          {patients.map((patient) => (
-            <tr key={patient._id}>
-              <td>{patient._id}</td>
-              <td>{patient.name}</td>
-              <td>{patient.dob}</td>
-              <td>{patient.gender}</td>
-              <td>{patient.email}</td>
-              <td>{patient.phone}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="table-container"> {/* Apply the 'table-container' class */}
+      <h2>Get All Patient Records</h2>
+      <pre className="table">{result}</pre> {/* Apply the 'table' class */}
     </div>
   );
-};
+}
 
 export default ReadAllPatientData;
