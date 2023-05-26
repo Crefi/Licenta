@@ -17,14 +17,14 @@
 }
 
 .input-login {
-  width: 100%;
+
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
 }
 
 .button-login {
-  width: 100%;
+ 
   padding: 10px;
   background-color: #4caf50;
   color: white;

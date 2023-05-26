@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import Sidebar from '../Sidebar/Sidebar';
 
-const RegisterPatient = () => {
+const RegisterDoctor = () => {
   const [id, setId] = useState('');
   const [patientId, setPatientId] = useState('');
   const [orgId, setOrg] = useState('');
@@ -18,7 +18,7 @@ const RegisterPatient = () => {
 
     try {
       const response = await axios.post(
-        'http://localhost:5001/registerPatient',
+        'http://localhost:5001/registerDoctor',
         {
           id,
           patientId,
@@ -127,4 +127,4 @@ const RegisterPatient = () => {
   );
 };
 
-export default RegisterPatient;
+export default RegisterDoctor;

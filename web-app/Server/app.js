@@ -116,23 +116,31 @@ async function updatePatientInfo(userObj) {
   }
 }
 
-
-
-
 async function readPatientData(userObj) {
   try {
-    let result
-    if (userObj.role === 'doctor') {
-      result = await evaluateTransaction('DoctorReadRecord', userObj)
-    } else if (userObj.role === 'patient') {
-      result = await evaluateTransaction('PatientReadRecord', userObj)
-    }
-    return result
+    const result = await evaluateTransaction('PatientReadRecord', userObj);
+    return result;
   } catch (error) {
-    console.error(`readPatientData() --> Failed to read the record: ${error}`)
-    throw new Error(`Failed to read the record: ${error}`)
+    console.error(`readPatientRecord() --> Failed to read the patient record: ${error}`);
+    throw new Error(`Failed to read the patient record: ${error}`);
   }
 }
+
+
+// async function readPatientData(userObj) {
+//   try {
+//     let result
+//     if (userObj.role === 'doctor') {
+//       result = await evaluateTransaction('DoctorReadRecord', userObj)
+//     } else if (userObj.id === 'admin') {
+//       result = await evaluateTransaction('PatientReadRecord', userObj)
+//     }
+//     return result
+//   } catch (error) {
+//     console.error(`readPatientData() --> Failed to read the record: ${error}`)
+//     throw new Error(`Failed to read the record: ${error}`)
+//   }
+// }
 
 async function readAllPatientData(userObj) {
   try {
@@ -153,6 +161,15 @@ async function getAllRecords(userObj) {
   }
 }
 
+async function getAllCounts(userObj) {
+  try {
+    const result = await evaluateTransaction('GetAllCounts', userObj);
+    return result;
+  } catch (error) {
+    console.error(`getAllCounts() --> Failed to retrieve counts: ${error}`);
+    throw new Error(`Failed to retrieve counts: ${error}`);
+  }
+}
 
 
 
@@ -211,7 +228,43 @@ async function revokeAccess(userObj) {
   }
 }
 
+async function transferRecord(userObj) {
+  const transferData = {
+    patientId: userObj.patientId,
+    orgId: userObj.orgId,
+    doctorId: userObj.doctorId,
+    newDoctor: userObj.doctorId,
+    message: userObj.message,
+    approved: false
+  };
 
+  try {
+    const result = await submitTransaction(
+      'TransferRecord',
+      userObj.patientId,
+      userObj.doctorId
+    );
+    return result;
+  } catch (error) {
+    console.error(`Failed to transfer the record: ${error}`);
+    throw new Error(`Failed to transfer the record: ${error}`);
+  }
+}
+
+
+
+
+
+async function approveTransfer(patientId, fromDoctorId) {
+  try {
+      const transferData = await evaluateTransaction('ApproveTransfer', patientId, fromDoctorId);
+      const transfer = JSON.parse(transferData.toString());
+      return transfer;
+  } catch (error) {
+      console.error(`approveTransfer() --> Failed to approve the transfer request: ${error}`);
+      throw new Error(`Failed to approve the transfer request: ${error}`);
+  }
+}
 module.exports = {
   registerDoctor,
   registerPatient,
@@ -224,6 +277,9 @@ module.exports = {
   updatePatientInfo,
   grantAccess,
   getAllRecords,
+  getAllCounts,
+  transferRecord,
+  approveTransfer,
   revokeAccess
 }
 

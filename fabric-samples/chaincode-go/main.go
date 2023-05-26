@@ -17,7 +17,6 @@ type Record struct {
     PatientId                  string   `json:"PatientId"`
     Address                    string   `json:"Address"`
     Telephone                  string   `json:"Telephone"`
-    HealthRecordId             string   `json:"HealthRecordId"`
     Diagnosis                  string   `json:"Diagnosis"`
     Medication                 string   `json:"Medication"`
     DoctorAuthorizationList    []string `json:"DoctorAuthorizationList"`
@@ -30,7 +29,6 @@ func (rc *RecordContract) InitPatientLedger(ctx contractapi.TransactionContextIn
             PatientId: "Patient1",
             Address: "A1",
             Telephone: "071234",
-            HealthRecordId: "EHR1",
             Diagnosis: "D1",
             Medication: "M1",
             DoctorAuthorizationList: []string{"Doc1"},
@@ -40,7 +38,6 @@ func (rc *RecordContract) InitPatientLedger(ctx contractapi.TransactionContextIn
             PatientId: "Patient2",
             Address: "A1",
             Telephone: "0712345",
-            HealthRecordId: "EHR2",
             Diagnosis: "D2",
             Medication: "M2",
             DoctorAuthorizationList: []string{"Doc2"},
@@ -50,7 +47,6 @@ func (rc *RecordContract) InitPatientLedger(ctx contractapi.TransactionContextIn
             PatientId: "Patient3",
             Address: "A3",
             Telephone: "07123456",
-            HealthRecordId: "EHR3",
             Diagnosis: "D3",
             Medication: "M3",
             DoctorAuthorizationList: []string{"Doc1","Doc2"},
@@ -75,6 +71,7 @@ func (rc *RecordContract) InitPatientLedger(ctx contractapi.TransactionContextIn
     return nil
 }
 
+
 func (rc *RecordContract) CreateRecord(ctx contractapi.TransactionContextInterface, userObjJSON string) (*Record, error) {
     userObj := struct {
         PatientId string `json:"patientId"`
@@ -83,6 +80,7 @@ func (rc *RecordContract) CreateRecord(ctx contractapi.TransactionContextInterfa
         Diagnosis string `json:"diagnosis"`
         Medication string `json:"medication"`
         DoctorId string `json:"doctorId"`
+        OrgId      string `json:"orgId"`
     }{}
 
     err := json.Unmarshal([]byte(userObjJSON), &userObj)
@@ -106,19 +104,20 @@ func (rc *RecordContract) CreateRecord(ctx contractapi.TransactionContextInterfa
 		Diagnosis: userObj.Diagnosis,
 		Medication: userObj.Medication,
 		DoctorAuthorizationList: []string{userObj.DoctorId},
-        OrganisationAuthorizationList: []string{},
+        OrganisationAuthorizationList: []string{userObj.OrgId},
 	}
 
 	recordJSON, err := json.Marshal(record)
 	if err != nil {
 		return nil, err
+        
 	}
 	
 	err = ctx.GetStub().PutState(record.PatientId, recordJSON)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &record, nil
 }
 
@@ -130,6 +129,8 @@ func (rc *RecordContract) UpdateRecord(ctx contractapi.TransactionContextInterfa
         Diagnosis string `json:"diagnosis"`
         Medication string `json:"medication"`
         DoctorId string `json:"doctorId"`
+        OrgId      string `json:"orgId"`
+
 	}{}
 
 	err := json.Unmarshal([]byte(userObjJSON), &userObj)
@@ -155,6 +156,8 @@ func (rc *RecordContract) UpdateRecord(ctx contractapi.TransactionContextInterfa
 		Diagnosis: userObj.Diagnosis,
 		Medication: userObj.Medication,
 		DoctorAuthorizationList: []string{userObj.DoctorId},
+        OrganisationAuthorizationList: []string{userObj.OrgId},
+
 	}
 	
 	recordJSON, err := json.Marshal(record)
@@ -169,6 +172,91 @@ func (rc *RecordContract) UpdateRecord(ctx contractapi.TransactionContextInterfa
 	
 	return &record, nil
 }
+func (rc *RecordContract) GrantAccess(ctx contractapi.TransactionContextInterface, userObj string) (string, error) {
+    var err error
+    var updatedRecordJSON []byte
+
+    // Parse userObj to get patientId and doctorId
+    var user map[string]interface{}
+    err = json.Unmarshal([]byte(userObj), &user)
+    if err != nil {
+        return "", err
+    }
+
+    patientId := user["patientId"].(string)
+    doctorId := user["doctorId"].(string)
+
+    // Get state from the ledger
+    recordJSON, err := ctx.GetStub().GetState(patientId)
+    if err != nil {
+        return "", fmt.Errorf("Failed to read from world state: %v", err)
+    }
+
+    if recordJSON == nil {
+        return "", fmt.Errorf("The Record %s does not exist", patientId)
+    }
+
+    // Parse recordJSON to get the existing record
+    var existingRecord map[string]interface{}
+    err = json.Unmarshal(recordJSON, &existingRecord)
+    if err != nil {
+        return "", err
+    }
+
+    // Update the doctor authorization list
+    authList := existingRecord["DoctorAuthorizationList"].([]interface{})
+    authList = append(authList, doctorId)
+
+    // Convert the doctor IDs to a string with proper formatting
+    updatedAuthList := make([]string, len(authList))
+    for i, id := range authList {
+        updatedAuthList[i] = id.(string)
+    }
+    existingRecord["DoctorAuthorizationList"] = updatedAuthList
+
+    // Put the updated record back in the ledger
+    updatedRecordJSON, err = json.Marshal(existingRecord)
+    if err != nil {
+        return "", err
+    }
+
+    err = ctx.GetStub().PutState(patientId, updatedRecordJSON)
+    if err != nil {
+        return "", fmt.Errorf("Failed to write to world state. %v", err)
+    }
+
+    return string(updatedRecordJSON), nil
+}
+
+func (rc *RecordContract) TransferRecord(ctx contractapi.TransactionContextInterface, id string, newDoctor string) error {
+    recordJSON, err := ctx.GetStub().GetState(id)
+    if err != nil {
+        return fmt.Errorf("failed to read record from the ledger: %w", err)
+    }
+    if recordJSON == nil {
+        return fmt.Errorf("the record %s does not exist", id)
+    }
+    record := Record{}
+    err = json.Unmarshal(recordJSON, &record)
+    if err != nil {
+        return fmt.Errorf("failed to unmarshal record JSON: %w", err)
+    }
+
+    record.DoctorAuthorizationList = []string{newDoctor}
+
+    newRecordJSON, err := json.Marshal(record)
+    if err != nil {
+        return fmt.Errorf("failed to marshal updated record JSON: %w", err)
+    }
+
+    err = ctx.GetStub().PutState(id, newRecordJSON)
+    if err != nil {
+        return fmt.Errorf("failed to update record in the ledger: %w", err)
+    }
+
+    return nil
+}
+
 
 
 func (rc *RecordContract) RecordExists(ctx contractapi.TransactionContextInterface, patientId string) (bool, error) {
@@ -289,9 +377,49 @@ func (rc *RecordContract) GetAllRecords(ctx contractapi.TransactionContextInterf
     return records, nil
 }
 
+func (rc *RecordContract) GetAllCounts(ctx contractapi.TransactionContextInterface, orgID string) (map[string]int, error) {
+	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve records: %w", err)
+	}
+	defer resultsIterator.Close()
+
+	doctorsCount := 0
+	patientsCount := 0
+
+	for resultsIterator.HasNext() {
+		result, err := resultsIterator.Next()
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate over records: %w", err)
+		}
+
+		record := new(Record)
+		err = json.Unmarshal(result.Value, record)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal record JSON: %w", err)
+		}
+
+		// Count doctors
+        doctorsCount += len(record.DoctorAuthorizationList)
+
+		// Count patients
+		if record.PatientId != "" {
+			patientsCount++
+		}
+
+	
+	}
+
+	counts := map[string]int{
+		"doctors":  doctorsCount,
+		"patients": patientsCount,
+	}
+
+	return counts, nil
+}
 
 
-
+  
 func (rc *RecordContract) AddDoctorAuthorization(ctx contractapi.TransactionContextInterface, patientId string, doctorId string) error {
     record, err := rc.GetRecord(ctx, patientId)
     if err != nil {
@@ -308,136 +436,7 @@ func (rc *RecordContract) AddDoctorAuthorization(ctx contractapi.TransactionCont
     return ctx.GetStub().PutState(patientId, recordJSON)
 }
 
-func (rc *RecordContract) TransferRecord(ctx contractapi.TransactionContextInterface, fromDoctorId string, patientId string, toDoctorId string, message string) error {
-    record, err := rc.GetRecord(ctx, patientId)
-    if err != nil {
-        return err
-    }
 
-    authorized := false
-    for _, doctorId := range record.DoctorAuthorizationList {
-        if doctorId == fromDoctorId {
-            authorized = true
-            break
-        }
-    }
-
-    if !authorized {
-        return fmt.Errorf("The doctor %s is not authorized to transfer this patient's record", fromDoctorId)
-    }
-
-    transfer := struct {
-        FromDoctorId string `json:"fromDoctorId"`
-        ToDoctorId   string `json:"toDoctorId"`
-        Message      string `json:"message"`
-        Approved     bool   `json:"approved"`
-    }{
-        FromDoctorId: fromDoctorId,
-        ToDoctorId:   toDoctorId,
-        Message:      message,
-        Approved:     false,
-    }
-
-    transferJSON, err := json.Marshal(transfer)
-    if err != nil {
-        return err
-    }
-
-    err = ctx.GetStub().PutState(patientId+"_"+fromDoctorId, transferJSON)
-    if err != nil {
-        return err
-    }
-
-    return nil
-}
-
-func (rc *RecordContract) ApproveTransfer(ctx contractapi.TransactionContextInterface, patientId string, fromDoctorId string) error {
-    transferJSON, err := ctx.GetStub().GetState(patientId+"_"+fromDoctorId)
-    if err != nil {
-        return err
-    }
-
-    if transferJSON == nil {
-        return fmt.Errorf("No transfer request found for patient %s and doctor %s", patientId, fromDoctorId)
-    }
-
-    transfer := struct {
-        FromDoctorId string `json:"fromDoctorId"`
-        ToDoctorId   string `json:"toDoctorId"`
-        Message      string `json:"message"`
-        Approved     bool   `json:"approved"`
-    }{}
-
-    err = json.Unmarshal(transferJSON, &transfer)
-    if err != nil {
-        return err
-    }
-
-    if transfer.Approved {
-        return fmt.Errorf("Transfer request for patient %s and doctor %s has already been approved", patientId, fromDoctorId)
-	}
-
-	record, err := rc.GetRecord(ctx, patientId)
-	if err != nil {
-		return err
-	}
-	
-	authorized := false
-	for _, doctorId := range record.DoctorAuthorizationList {
-		if doctorId == fromDoctorId {
-			authorized = true
-			break
-		}
-	}
-	
-	if !authorized {
-		return fmt.Errorf("The doctor %s is not authorized to approve the transfer of this patient's record", fromDoctorId)
-	}
-	
-	transfer.Approved = true
-	transferJSON, err = json.Marshal(transfer)
-	if err != nil {
-		return err
-	}
-	
-	err = ctx.GetStub().PutState(patientId+"_"+fromDoctorId, transferJSON)
-	if err != nil {
-		return err
-	}
-	
-	// Retrieve the transfer request again to make sure it was updated successfully
-	transferJSON, err = ctx.GetStub().GetState(patientId+"_"+fromDoctorId)
-	if err != nil {
-		return err
-	}
-	
-	err = json.Unmarshal(transferJSON, &transfer)
-	if err != nil {
-		return err
-	}
-	
-	if !transfer.Approved {
-		return fmt.Errorf("Failed to approve transfer request for patient %s and doctor %s", patientId, fromDoctorId)
-	}
-	
-	// Remove the doctor from the authorization list
-	for i, doctorId := range record.DoctorAuthorizationList {
-		if doctorId == fromDoctorId {
-			record.DoctorAuthorizationList = append(record.DoctorAuthorizationList[:i], record.DoctorAuthorizationList[i+1:]...)
-			break
-		}
-	}
-	
-	// Add the new doctor to the authorization list
-	record.DoctorAuthorizationList = append(record.DoctorAuthorizationList, transfer.ToDoctorId)
-	
-	recordJSON, err := json.Marshal(record)
-	if err != nil {
-		return err
-	}
-	
-	return ctx.GetStub().PutState(patientId, recordJSON)
-}
 func (rc *RecordContract) UpdatePatientInfo(ctx contractapi.TransactionContextInterface, userObj string) (string, error) {
     var err error
     var updatedRecordJSON []byte
@@ -492,62 +491,13 @@ func (rc *RecordContract) UpdatePatientInfo(ctx contractapi.TransactionContextIn
 }
 
 
-func (rc *RecordContract) GrantAccess(ctx contractapi.TransactionContextInterface, userObj string) (string, error) {
-    var err error
-    var updatedRecordJSON []byte
 
-    // Parse userObj to get patientId and doctorId
-    var user map[string]interface{}
-    err = json.Unmarshal([]byte(userObj), &user)
-    if err != nil {
-        return "", err
-    }
-
-    patientId := user["patientId"].(string)
-    doctorId := user["doctorId"].(string)
-
-    // Get state from the ledger
-    recordJSON, err := ctx.GetStub().GetState(patientId)
-    if err != nil {
-        return "", fmt.Errorf("Failed to read from world state: %v", err)
-    }
-
-    if recordJSON == nil {
-        return "", fmt.Errorf("The Record %s does not exist", patientId)
-    }
-
-    // Parse recordJSON to get the existing record
-    var existingRecord map[string]interface{}
-    err = json.Unmarshal(recordJSON, &existingRecord)
-    if err != nil {
-        return "", err
-    }
-
-    // Update the doctor authorization list
-    authList := existingRecord["DoctorAuthorizationList"].([]interface{})
-    authList = append(authList, doctorId)
-    existingRecord["DoctorAuthorizationList"] = authList
-
-    // Put the updated record back in the ledger
-    updatedRecordJSON, err = json.Marshal(existingRecord)
-    if err != nil {
-        return "", err
-    }
-
-    err = ctx.GetStub().PutState(patientId, updatedRecordJSON)
-    if err != nil {
-        return "", fmt.Errorf("Failed to write to world state. %v", err)
-    }
-
-    return string(updatedRecordJSON), nil
-}
-
-// RevokeAccess removes the authorization of a doctor or organization from accessing a patient's record.
+// RevokeAccess removes the authorization of a doctor from accessing a patient's record.
 func (rc *RecordContract) RevokeAccess(ctx contractapi.TransactionContextInterface, userObjJSON string) error {
 	// Parse the incoming JSON data into a struct that we can use
 	userObj := struct {
 		PatientId        string `json:"patientId"`
-		AuthorizedEntity string `json:"authorizedEntity"`
+		DoctorId         string `json:"doctorId"`
 	}{}
 
 	err := json.Unmarshal([]byte(userObjJSON), &userObj)
@@ -575,21 +525,11 @@ func (rc *RecordContract) RevokeAccess(ctx contractapi.TransactionContextInterfa
 		return fmt.Errorf("failed to unmarshal record JSON data: %v", err)
 	}
 
-	// Check if the authorized entity is a doctor or organization, and remove it from the appropriate list
-	isDoctor := false
+	// Remove the doctor from the authorization list
 	for i, doctorId := range record.DoctorAuthorizationList {
-		if doctorId == userObj.AuthorizedEntity {
+		if doctorId == userObj.DoctorId {
 			record.DoctorAuthorizationList = append(record.DoctorAuthorizationList[:i], record.DoctorAuthorizationList[i+1:]...)
-			isDoctor = true
 			break
-		}
-	}
-	if !isDoctor {
-		for i, orgId := range record.OrganisationAuthorizationList {
-			if orgId == userObj.AuthorizedEntity {
-				record.OrganisationAuthorizationList = append(record.OrganisationAuthorizationList[:i], record.OrganisationAuthorizationList[i+1:]...)
-				break
-			}
 		}
 	}
 
@@ -605,7 +545,62 @@ func (rc *RecordContract) RevokeAccess(ctx contractapi.TransactionContextInterfa
 
 	return nil
 }
+func (rc *RecordContract) PatientReadRecord(ctx contractapi.TransactionContextInterface, userObj string) (string, error) {
+    var user struct {
+        PatientID string `json:"patientId"`
+    }
+    var recordJSON []byte
+    err := json.Unmarshal([]byte(userObj), &user)
+    if err != nil {
+        return "", fmt.Errorf("failed to unmarshal userObj: %v", err)
+    }
 
+    patientID := user.PatientID
+    recordJSON, err = ctx.GetStub().GetState(patientID)
+    if err != nil {
+        return "", fmt.Errorf("failed to read record: %v", err)
+    }
+
+    if recordJSON == nil || len(recordJSON) == 0 {
+        return "", fmt.Errorf("the Record %s does not exist", patientID)
+    }
+
+    return string(recordJSON), nil
+}
+
+
+
+func (rc *RecordContract) DoctorReadRecord(ctx contractapi.TransactionContextInterface, userObjJSON string) ([]byte, error) {
+    userObj := struct {
+        PatientId string `json:"patientId"`
+        DoctorId  string `json:"doctorId"`
+    }{}
+    err := json.Unmarshal([]byte(userObjJSON), &userObj)
+    if err != nil {
+        return nil, fmt.Errorf("failed to unmarshal user JSON: %w", err)
+    }
+
+    patientId := userObj.PatientId
+    doctorId := userObj.DoctorId
+
+    recordJSON, err := ctx.GetStub().GetState(patientId)
+    if err != nil {
+        return nil, fmt.Errorf("failed to read record from the ledger: %w", err)
+    }
+    if recordJSON == nil {
+        return nil, fmt.Errorf("the record %s does not exist", patientId)
+    }
+
+    auth, err := rc.CheckAuthorization(ctx, recordJSON, doctorId)
+    if err != nil {
+        return nil, fmt.Errorf("failed to check authorization: %w", err)
+    }
+    if !auth {
+        return []byte("Access Denied"), nil
+    }
+
+    return recordJSON, nil
+}
 
 func (rc *RecordContract) CheckAuthorization(ctx contractapi.TransactionContextInterface, recordJSON []byte, doctorId string) (bool, error) {
     updatedRecord := new(Record)
@@ -613,16 +608,14 @@ func (rc *RecordContract) CheckAuthorization(ctx contractapi.TransactionContextI
     if err != nil {
         return false, fmt.Errorf("failed to unmarshal record: %v", err)
     }
-    authrozationList := updatedRecord.DoctorAuthorizationList
-    for _, id := range authrozationList {
+    authorizationList := updatedRecord.DoctorAuthorizationList
+    for _, id := range authorizationList {
         if id == doctorId {
             return true, nil
         }
     }
     return false, nil
 }
-
-
 func main() {
 		// Start the chaincode and make it ready for futures requests
 	recordContract := new(RecordContract)

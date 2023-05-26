@@ -39,6 +39,7 @@
   height: 100%;
   border-bottom: 3px solid transparent;
 }
+
 .fa-code {
   margin-left: 1rem;
 }
@@ -47,7 +48,13 @@
   line-height: 40px;
   margin-right: 1rem;
 }
-
+.nav-role {
+  color: #fff;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  height: 100%;
+  border-bottom: 3px solid transparent;
+}
 .nav-item:after {
   content: "";
   display: block;
@@ -100,7 +107,11 @@
     width: 100%;
     display: table;
   }
-
+  .nav-role {
+    padding: 1.5rem;
+    width: 100%;
+    display: table;
+  }
   .nav-icon {
     display: block;
     position: absolute;

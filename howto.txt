@@ -25,7 +25,13 @@ go get github.com/hyperledger/fabric-contract-api-go/contractapi
 5.0 : go to web-app server
 5.  Run this :  node registerHospital1Admin.js
                 node registerHospital2Admin.js
-6. Opreste network-ul :
+
+npm install fabric-ca-client ( in caz ca lipseste)
+npm install fabric-network
+
+6. Start server : npm run dev
+
+7. Opreste network-ul :
 ./network.sh down
 
 

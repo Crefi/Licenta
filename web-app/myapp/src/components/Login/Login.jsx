@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import "./Login.css";
+import './Login.css';
 import Sidebar from '../Sidebar/Sidebar';
+import loginSvg from '../Images/login.svg';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -32,31 +33,35 @@ const Login = () => {
       } else if (role === 'doctor') {
         navigate('/doctor-dashboard');
       }
-
     } catch (error) {
       console.error(error);
     }
   };
 
   return (
-    <div>
-      <h1 className="h1-login">Login</h1>
-      <form className="login-form" onSubmit={handleSubmit}>
-        <div>
-          <label className="label-login">Username:</label>
-          <input className="input-login" type="text" value={username} onChange={(e) => setUsername(e.target.value)} />
+    <div className="container">
+      <div className="row">
+        <div className="col-md-6">
+          <img src={loginSvg} alt="Login" className="img-fluid" />
         </div>
-        <div>
-          <label className="label-login">Password:</label>
-          <input className="input-login" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <div className="col-md-6">
+          <h1 className="h1-login">Login</h1>
+          <form className="login-form" onSubmit={handleSubmit}>
+            <div className="mb-3">
+              <label className="label-login">Username:</label>
+              <input className="form-control" type="text" value={username} onChange={(e) => setUsername(e.target.value)} />
+            </div>
+            <div className="mb-3">
+              <label className="label-login">Password:</label>
+              <input className="form-control" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            </div>
+            <button className="btn btn-primary" type="submit">Login</button>
+          </form>
         </div>
-        <button className="button-login" type="submit">Login</button>
-      </form>
+      </div>
       {isAuthenticated && <Sidebar role={localStorage.getItem('role')} />}
-      
     </div>
   );
 };
-
 
 export default Login;

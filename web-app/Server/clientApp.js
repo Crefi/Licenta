@@ -7,18 +7,18 @@ const User = require('./user.js')
 const fs = require('fs');
 
 
-const clinetApp = express();
-clinetApp.use(morgan('combined'));
-clinetApp.use(bodyParser.json());
-clinetApp.use(cors());
+const clientApp = express();
+clientApp.use(morgan('combined'));
+clientApp.use(bodyParser.json());
+clientApp.use(cors());
 const jwt = require('jsonwebtoken');
-clinetApp.use(bodyParser.urlencoded({
+clientApp.use(bodyParser.urlencoded({
   extended: true
 }));
 
 
 const credentials = require('./credentials.json')
-clinetApp.listen(5001, () => console.log('Backend server running on 5001'));
+clientApp.listen(5001, () => console.log('Backend server running on 5001'));
 
 
 
@@ -58,7 +58,7 @@ const authenticateJWT = (req, res, next) => {
   }
 };
 
-clinetApp.get('/patient/dashboard', authenticateJWT, (req, res) => {
+clientApp.get('/patient/dashboard', authenticateJWT, (req, res) => {
   const role = fetchCredentials(req.user.username, "role");
   if (role === "patient") {
     // User role can access this route
@@ -69,7 +69,7 @@ clinetApp.get('/patient/dashboard', authenticateJWT, (req, res) => {
   }
 });
 
-clinetApp.get('/admin/dashboard', authenticateJWT, (req, res) => {
+clientApp.get('/admin/dashboard', authenticateJWT, (req, res) => {
   const role = fetchCredentials(req.user.username, "role");
   if (role === "admin") {
     // Admin role can access this route
@@ -79,7 +79,7 @@ clinetApp.get('/admin/dashboard', authenticateJWT, (req, res) => {
     res.status(403).json({ error: 'Forbidden' });
   }
 });
-clinetApp.get('/doctor/dashboard', authenticateJWT, (req, res) => {
+clientApp.get('/doctor/dashboard', authenticateJWT, (req, res) => {
   const role = fetchCredentials(req.user.username, "role");
   if (role === "doctor") {
     // Admin role can access this route
@@ -90,57 +90,66 @@ clinetApp.get('/doctor/dashboard', authenticateJWT, (req, res) => {
   }
 });
 
-clinetApp.post('/login', (req, res) => {
-  const { username, password, orgId } = req.body;
+clientApp.post('/login', (req, res) => {
+  try {
+    const { username, password, orgId } = req.body;
 
-  // Validate username and password
-  const passwd = fetchCredentials(username, "password");
-  const isValid = password && password === passwd;
+    // Validate username and password
+    const passwd = fetchCredentials(username, "password");
+    const isValid = password && password === passwd;
 
-  if (isValid) {
-    // Generate an access token
-    const role = fetchCredentials(username, "role");
-    const accessToken = jwt.sign({ username, role, orgId }, passwd);
-    res.json({ accessToken, role, orgId });
-  } else {
-    res.status(401).json({ error: "Invalid username or password" });
+    if (isValid) {
+      // Generate an access token
+      const role = fetchCredentials(username, "role");
+      const accessToken = jwt.sign({ username, role, orgId }, passwd);
+      res.json({ accessToken, role, orgId });
+    } else {
+      res.status(401).json({ error: "Invalid username or password" });
+    }
+  } catch (error) {
+    res.status(500).json({ error: "An error occurred at login" });
   }
 });
 
 
+clientApp.post('/register', (req, res) => {
+  try {
+    const { username, password, role, orgId } = req.body;
 
-clinetApp.post('/register', (req, res) => {
-  const { username, password, role, orgId } = req.body;
+    // Validate input data
+    if (!username || typeof username !== "string") {
+      return res.status(400).json({ error: "Username is required and must be a string" });
+    }
+    if (!password || typeof password !== "string") {
+      return res.status(400).json({ error: "Password is required and must be a string" });
+    }
+    if (!role || typeof role !== "string") {
+      return res.status(400).json({ error: "Role is required and must be a string" });
+    }
 
-  // Validate input data
-  if (!username || typeof username !== "string") {
-    return res.status(400).json({ error: "Username is required and must be a string" });
-  }
-  if (!password || typeof password !== "string") {
-    return res.status(400).json({ error: "Password is required and must be a string" });
-  }
-  if (!role || typeof role !== "string") {
-    return res.status(400).json({ error: "Role is required and must be a string" });
-  }
- 
-  if (!orgId || typeof orgId !== "string") {
-    return res.status(400).json({ error: "orgId is required and must be a string" });
-  }
+    if (!orgId || typeof orgId !== "string") {
+      return res.status(400).json({ error: "orgId is required and must be a string" });
+    }
 
-  const users = require('./credentials.json');
-  const existingUser = Object.keys(users).find((key) => users[key].username === username);
+    const users = require('./credentials.json');
+    const existingUser = Object.keys(users).find((key) => users[key].username === username);
 
-  if (existingUser) {
-    return res.status(409).json({ error: "Username already taken" });
-  } else {
-    const newUser = { username, password, role, orgId };
-    users[username] = newUser;
-    fs.writeFileSync('credentials.json', JSON.stringify(users));
-    return res.status(200).json({ message: "User registered successfully" });
+    if (existingUser) {
+      return res.status(409).json({ error: "Username already taken" });
+    } else {
+      const newUser = { username, password, role, orgId };
+      users[username] = newUser;
+      fs.writeFileSync('credentials.json', JSON.stringify(users));
+      return res.status(200).json({ message: "User registered successfully" });
+    }
+  } catch (error) {
+    res.status(500).json({ error: "An error occurred" });
   }
 });
 
-clinetApp.post('/registerDoctor',  async (req, res) => {
+
+clientApp.post('/registerDoctor',  async (req, res) => {
+  try {
 	const doctorObj = new User(req.body)
 	const response = await app.registerDoctor(doctorObj);
 	if (response.error) {
@@ -148,9 +157,13 @@ clinetApp.post('/registerDoctor',  async (req, res) => {
   } else {
     res.send(JSON.stringify(response));
   }
+} catch (error) {
+  res.status(500).json({ error: "An error occurred" });
+}
 });
 
-clinetApp.post('/registerPatient', async (req, res) => {
+clientApp.post('/registerPatient', async (req, res) => {
+  try {
 	const patientObj = new User(req.body)
 	const response = await app.registerPatient(patientObj);
 	console.log(response);
@@ -159,10 +172,14 @@ clinetApp.post('/registerPatient', async (req, res) => {
   } else {
     res.send(response);
   }
+} catch (error) {
+  res.status(500).json({ error: "An error occurred" });
+}
 });
 
 
-clinetApp.post('/updatePatientInfo', async (req, res) => {
+clientApp.post('/updatePatientInfo', async (req, res) => {
+  try {
 	const patientObj = new User(req.body)
 	const response = await app.updatePatientInfo(patientObj)
 	if (response.error) {
@@ -170,12 +187,17 @@ clinetApp.post('/updatePatientInfo', async (req, res) => {
   } else {
     res.send(response);
   }
+
+} catch (error) {
+  res.status(500).json({ error: "An error occurred" });
+}
 });
 
 
 
 
-clinetApp.post('/readPatientData', authenticateJWT, async (req, res) => {
+clientApp.post('/readPatientData', async (req, res) => {
+  try {
 	const patientObj = new User(req.body)
 	const response = await app.readPatientData(patientObj);
 	if (response.error) {
@@ -183,10 +205,14 @@ clinetApp.post('/readPatientData', authenticateJWT, async (req, res) => {
   } else {
     res.send(response);
   }
+} catch (error) {
+  res.status(500).json({ error: "An error occurred" });
+}
 });
 
 
-clinetApp.post('/readAllPatientData', async (req, res) => {
+clientApp.post('/readAllPatientData', async (req, res) => {
+  try {
 	const patientObj = new User(req.body)
 	const response = await app.readAllPatientData(patientObj);
 	if (response.error) {
@@ -194,8 +220,13 @@ clinetApp.post('/readAllPatientData', async (req, res) => {
   } else {
     res.send(response);
   }
+
+} catch (error) {
+  res.status(500).json({ error: "An error occurred" });
+}
 });
-clinetApp.get('/getAllRecords' ,async (req, res) => {
+clientApp.get('/getAllRecords' ,async (req, res) => {
+  try {
   const { id, orgId } = req.query;
   const userObj = new User({ id, orgId });
   const response = await app.getAllRecords(userObj);
@@ -204,11 +235,29 @@ clinetApp.get('/getAllRecords' ,async (req, res) => {
   } else {
     res.send(response);
   }
+} catch (error) {
+  res.status(500).json({ error: "An error occurred" });
+}
 });
 
+clientApp.get('/getAllCounts', async (req, res) => {
+  try {
+  const { id,orgId } = req.query;
+  const userObj = new User({ id,orgId });
+  const counts = await app.getAllCounts(userObj);
+  if (counts.error) {
+    res.status(500).send(counts.error);
+  } else {
+    res.send(counts);
+  }
+} catch (error) {
+  res.status(500).json({ error: "An error occurred" });
+}
+});
 
 // Route to invoke function to get history of a record
-clinetApp.post('/getRecordHistory', async (req, res) => {
+clientApp.post('/getRecordHistory', async (req, res) => {
+  try {
   console.log('Beginning client API getRecordHistory')
 	const patientObj = new User(req.body)
 	const response = await app.getRecordHistory(patientObj);  
@@ -219,9 +268,14 @@ clinetApp.post('/getRecordHistory', async (req, res) => {
   }
   console.log(response)
   console.log('Ending client API getRecordHistory')
+
+} catch (error) {
+  res.status(500).json({ error: "An error occurred" });
+}
 });
 
-clinetApp.post('/initialize', async (req, res) => {
+clientApp.post('/initialize', async (req, res) => {
+  try {
 	const patientObj = new User(req.body)
 	const response = await app.initLedger(patientObj);
 	if (response.error) {
@@ -229,9 +283,14 @@ clinetApp.post('/initialize', async (req, res) => {
   } else {
     res.send(response);
   }
+
+} catch (error) {
+  res.status(500).json({ error: "An error occurred" });
+}
 });
 
-clinetApp.post('/grantAccess', async (req, res) => {
+clientApp.post('/grantAccess', async (req, res) => {
+  try {
 	const patientObj = new User(req.body)
 	const response = await app.grantAccess(patientObj);
 	if (response.error) {
@@ -239,14 +298,48 @@ clinetApp.post('/grantAccess', async (req, res) => {
   } else {
     res.send(response);
   }
+
+} catch (error) {
+  res.status(500).json({ error: "An error occurred" });
+}
 });
 
-clinetApp.post('/revokeAccess', async (req, res) => {
+clientApp.post('/revokeAccess', async (req, res) => {
+  try {
 	const patientObj = new User(req.body)
 	const response = await app.revokeAccess(patientObj);
 	if (response.error) {
     res.send(response.error);
   } else {
     res.send(response);
+  }
+} catch (error) {
+  res.status(500).json({ error: "An error occurred" });
+}
+});
+
+clientApp.post('/transferRecord', async (req, res) => {
+  const transferData = new User(req.body)
+
+
+  try {
+    const result = await app.transferRecord(transferData);
+    if (result.error) {
+      res.send(result.error);
+    } else {
+      res.send(result);
+    }
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+clientApp.get('/approveTransfer', async (req, res) => {
+  const { patientId, doctorId } = new User(req.query)
+  try {
+      const result = await approveTransfer(patientId, doctorId);
+      res.send(JSON.stringify(result));
+  } catch (error) {
+      res.status(500).send(JSON.stringify({ error: error.message }));
   }
 });

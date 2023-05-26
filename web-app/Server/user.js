@@ -8,6 +8,7 @@ class User {
       this.medication = obj.medication
       this.doctorId = obj.doctorId
       this.orgId = obj.orgId
+      this.message = obj.message
 
     }
   }

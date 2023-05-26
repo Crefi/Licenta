@@ -1,60 +1,76 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import './GrantAccess.css';
 import Sidebar from '../Sidebar/Sidebar';
 
-const GrantAccess = () => {
-  const [id, setId] = useState('');
+function GrantAccess() {
   const [patientId, setPatientId] = useState('');
   const [doctorId, setDoctorId] = useState('');
-  const [orgId, setOrg] = useState('');
-  const [message, setMessage] = useState('');
+  const [grantAccessResult, setGrantAccessResult] = useState('');
+  const [revokeAccessResult, setRevokeAccessResult] = useState('');
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
+  const handleGrantAccess = async () => {
     try {
       const response = await axios.post('/grantAccess', {
-        id,
-        patientId,
-        doctorId,
-        orgId,
+        id: "admin",
+        patientId: patientId,
+        doctorId: doctorId,
+        orgId:"Hospital1",
       });
-      setMessage(response.data);
+
+      if (response.data.error) {
+        setGrantAccessResult(response.data.error);
+      } else {
+        setGrantAccessResult('Access granted successfully.');
+      }
     } catch (error) {
-      setMessage(error.response.data);
+      setGrantAccessResult('An error occurred.');
+    }
+  };
+
+  const handleRevokeAccess = async () => {
+    try {
+      const response = await axios.post('/revokeAccess', {
+        id: "admin",
+        patientId: patientId,
+        doctorId: doctorId,
+        orgId:"Hospital1",
+      });
+
+      if (response.data.error) {
+        setRevokeAccessResult(response.data.error);
+      } else {
+        setRevokeAccessResult('Access revoked successfully.');
+      }
+    } catch (error) {
+      setRevokeAccessResult('An error occurred.');
     }
   };
 
   return (
     <div>
       <Sidebar role={localStorage.getItem('role')} />
-      <h2>Grant Access</h2>
-      <form onSubmit={handleSubmit}>
-      <label>
-          Patient role:
-          <input type="text" value={id} onChange={(e) => setId(e.target.value)} />
-        </label>
-        <br />
-        <label>
-          Patient ID:
-          <input type="text" value={patientId} onChange={(e) => setPatientId(e.target.value)} />
-        </label>
-        <br />
-        <label>
-          Doctor ID:
-          <input type="text" value={doctorId} onChange={(e) => setDoctorId(e.target.value)} />
-        </label>
-        <br />
-        <label>
-          Patient organization:
-          <input type="text" value={orgId} onChange={(e) => setOrg(e.target.value)} />
-        </label>
-        <br />
-        <button type="submit">Grant Access</button>
-      </form>
-      <p>{message}</p>
+      <div className="container">
+        <h2>Grant/Revoke Access</h2>
+        <div className="form-group">
+          <label>Patient ID:</label>
+          <input type="text" className="form-control" value={patientId} onChange={(e) => setPatientId(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label>Doctor ID:</label>
+          <input type="text" className="form-control" value={doctorId} onChange={(e) => setDoctorId(e.target.value)} />
+        </div>
+        <div className="button-container">
+          <button className="btn btn-primary" onClick={handleGrantAccess}>Grant Access</button>
+          <button className="btn btn-danger" onClick={handleRevokeAccess}>Revoke Access</button>
+        </div>
+        <div className="result-container">
+          {grantAccessResult && <p>{grantAccessResult}</p>}
+          {revokeAccessResult && <p>{revokeAccessResult}</p>}
+        </div>
+      </div>
     </div>
   );
-};
+}
 
 export default GrantAccess;
