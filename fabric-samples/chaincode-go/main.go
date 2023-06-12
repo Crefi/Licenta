@@ -228,35 +228,112 @@ func (rc *RecordContract) GrantAccess(ctx contractapi.TransactionContextInterfac
     return string(updatedRecordJSON), nil
 }
 
-func (rc *RecordContract) TransferRecord(ctx contractapi.TransactionContextInterface, id string, newDoctor string) error {
-    recordJSON, err := ctx.GetStub().GetState(id)
+func (rc *RecordContract) TransferRecord(ctx contractapi.TransactionContextInterface, userObjJSON string) (string, error) {
+    var userObj struct {
+        PatientId    string `json:"patientId"`
+        NewDoctorId  string `json:"newDoctorId"`
+    }
+    err := json.Unmarshal([]byte(userObjJSON), &userObj)
     if err != nil {
-        return fmt.Errorf("failed to read record from the ledger: %w", err)
+        return "", err
+    }
+
+    // Get state from the ledger
+    recordJSON, err := ctx.GetStub().GetState(userObj.PatientId)
+    if err != nil {
+        return "", fmt.Errorf("Failed to read from world state: %v", err)
     }
     if recordJSON == nil {
-        return fmt.Errorf("the record %s does not exist", id)
+        return "", fmt.Errorf("The record %s does not exist", userObj.PatientId)
     }
-    record := Record{}
-    err = json.Unmarshal(recordJSON, &record)
+
+    // Parse recordJSON to get the existing record
+    existingRecord := make(map[string]interface{})
+    err = json.Unmarshal(recordJSON, &existingRecord)
     if err != nil {
-        return fmt.Errorf("failed to unmarshal record JSON: %w", err)
+        return "", fmt.Errorf("Failed to unmarshal existing record JSON: %v", err)
     }
 
-    record.DoctorAuthorizationList = []string{newDoctor}
 
-    newRecordJSON, err := json.Marshal(record)
+    // Update the transfer status to pending approval
+    existingRecord["TransferStatus"] = "PendingApproval"
+
+    // Marshal the updated record back to JSON
+    updatedRecordJSON, err := json.Marshal(existingRecord)
     if err != nil {
-        return fmt.Errorf("failed to marshal updated record JSON: %w", err)
+        return "", fmt.Errorf("Failed to marshal updated record JSON: %v", err)
     }
 
-    err = ctx.GetStub().PutState(id, newRecordJSON)
+    // Put the updated record back in the ledger
+    err = ctx.GetStub().PutState(userObj.PatientId, updatedRecordJSON)
     if err != nil {
-        return fmt.Errorf("failed to update record in the ledger: %w", err)
+        return "", fmt.Errorf("Failed to write to world state: %v", err)
     }
 
-    return nil
+    return string(updatedRecordJSON), nil
 }
 
+func (rc *RecordContract) ApproveTransfer(ctx contractapi.TransactionContextInterface, userObjJSON string) (string, error) {
+    var userObj struct {
+        PatientId    string `json:"patientId"`
+        NewDoctorId  string `json:"newDoctorId"`
+    }
+
+    err := json.Unmarshal([]byte(userObjJSON), &userObj)
+    if err != nil {
+        return "", err
+    }
+
+    // Get state from the ledger
+    recordJSON, err := ctx.GetStub().GetState(userObj.PatientId)
+    if err != nil {
+        return "", fmt.Errorf("Failed to read from world state: %v", err)
+    }
+    if recordJSON == nil {
+        return "", fmt.Errorf("The record %s does not exist", userObj.PatientId)
+    }
+
+    // Parse recordJSON to get the existing record
+    existingRecord := make(map[string]interface{})
+    err = json.Unmarshal(recordJSON, &existingRecord)
+    if err != nil {
+        return "", fmt.Errorf("Failed to unmarshal existing record JSON: %v", err)
+    }
+
+    // Check if the transfer status is pending approval
+    transferStatus := existingRecord["TransferStatus"].(string)
+    if transferStatus != "PendingApproval" {
+        return "", fmt.Errorf("Cannot approve transfer. Transfer status is not pending approval")
+    }
+
+    // Update the doctor authorization list
+    authList := existingRecord["DoctorAuthorizationList"].([]interface{})
+    updatedAuthList := make([]string, len(authList))
+    for i, id := range authList {
+        updatedAuthList[i] = id.(string)
+    }
+    updatedAuthList = append(updatedAuthList, userObj.NewDoctorId)
+    existingRecord["DoctorAuthorizationList"] = updatedAuthList
+
+    // Perform additional actions for approving the transfer
+    // For example, update the transfer status to approved and notify relevant parties
+    existingRecord["TransferStatus"] = "Approved"
+    existingRecord["NewDoctorId"] = userObj.NewDoctorId
+
+    // Marshal the updated record back to JSON
+    updatedRecordJSON, err := json.Marshal(existingRecord)
+    if err != nil {
+        return "", fmt.Errorf("Failed to marshal updated record JSON: %v", err)
+    }
+
+    // Put the updated record back in the ledger
+    err = ctx.GetStub().PutState(userObj.PatientId, updatedRecordJSON)
+    if err != nil {
+        return "", fmt.Errorf("Failed to write to world state: %v", err)
+    }
+
+    return string(updatedRecordJSON), nil
+}
 
 
 func (rc *RecordContract) RecordExists(ctx contractapi.TransactionContextInterface, patientId string) (bool, error) {
@@ -419,22 +496,6 @@ func (rc *RecordContract) GetAllCounts(ctx contractapi.TransactionContextInterfa
 }
 
 
-  
-func (rc *RecordContract) AddDoctorAuthorization(ctx contractapi.TransactionContextInterface, patientId string, doctorId string) error {
-    record, err := rc.GetRecord(ctx, patientId)
-    if err != nil {
-        return err
-    }
-
-    record.DoctorAuthorizationList = append(record.DoctorAuthorizationList, doctorId)
-
-    recordJSON, err := json.Marshal(record)
-    if err != nil {
-        return err
-    }
-
-    return ctx.GetStub().PutState(patientId, recordJSON)
-}
 
 
 func (rc *RecordContract) UpdatePatientInfo(ctx contractapi.TransactionContextInterface, userObj string) (string, error) {
@@ -567,6 +628,7 @@ func (rc *RecordContract) PatientReadRecord(ctx contractapi.TransactionContextIn
 
     return string(recordJSON), nil
 }
+
 
 
 
