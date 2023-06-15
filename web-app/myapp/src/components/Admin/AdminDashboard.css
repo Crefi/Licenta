@@ -1,0 +1,16 @@
+
+  .col-md-4 {
+    margin-left: 250px; /* Adjust the value to match the width of your sidebar */
+    padding: 20px; /* Add padding to create space between the sidebar and content */
+  }
+  .table-container {
+    margin-left: 250px; /* Adjust the value to match the width of your sidebar */
+    padding: 20px; /* Add padding to create space between the sidebar and content */
+  }
+
+
+  
+  .container h1,
+  .container p {
+    text-align: center;
+  }

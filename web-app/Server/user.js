@@ -9,6 +9,9 @@ class User {
       this.doctorId = obj.doctorId
       this.orgId = obj.orgId
       this.message = obj.message
+      this.newDoctorId = obj.newDoctorId
+      
+
 
     }
   }

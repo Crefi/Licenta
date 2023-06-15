@@ -125,6 +125,15 @@ async function readPatientData(userObj) {
     throw new Error(`Failed to read the patient record: ${error}`);
   }
 }
+async function readDoctorData(userObj) {
+  try {
+    const result = await evaluateTransaction('DoctorReadRecord', userObj);
+    return result;
+  } catch (error) {
+    console.error(`readPatientRecord() --> Failed to read the patient record: ${error}`);
+    throw new Error(`Failed to read the patient record: ${error}`);
+  }
+}
 
 
 // async function readPatientData(userObj) {
@@ -228,41 +237,25 @@ async function revokeAccess(userObj) {
   }
 }
 
-async function transferRecord(userObj) {
-  const transferData = {
-    patientId: userObj.patientId,
-    orgId: userObj.orgId,
-    doctorId: userObj.doctorId,
-    newDoctor: userObj.doctorId,
-    message: userObj.message,
-    approved: false
-  };
 
+async function transferRecord(userObj) {
   try {
-    const result = await submitTransaction(
-      'TransferRecord',
-      userObj.patientId,
-      userObj.doctorId
-    );
-    return result;
+    const result = await submitTransaction('TransferRecord', userObj)
+    return result
   } catch (error) {
-    console.error(`Failed to transfer the record: ${error}`);
-    throw new Error(`Failed to transfer the record: ${error}`);
+    console.error(`updatePatientData() --> Failed to update the record: ${error}`)
+    throw new Error(`Failed to update the record: ${error}`)
   }
 }
 
 
-
-
-
-async function approveTransfer(patientId, fromDoctorId) {
+async function approveTransfer(userObj) {
   try {
-      const transferData = await evaluateTransaction('ApproveTransfer', patientId, fromDoctorId);
-      const transfer = JSON.parse(transferData.toString());
-      return transfer;
+    const result = await submitTransaction('ApproveTransfer', userObj)
+    return result
   } catch (error) {
-      console.error(`approveTransfer() --> Failed to approve the transfer request: ${error}`);
-      throw new Error(`Failed to approve the transfer request: ${error}`);
+    console.error(`approveTransfer() --> Failed to update the record: ${error}`)
+    throw new Error(`Failed to update the record: ${error}`)
   }
 }
 module.exports = {
@@ -280,6 +273,7 @@ module.exports = {
   getAllCounts,
   transferRecord,
   approveTransfer,
+  readDoctorData,
   revokeAccess
 }
 

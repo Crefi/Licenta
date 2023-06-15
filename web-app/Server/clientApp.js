@@ -19,6 +19,7 @@ clientApp.use(bodyParser.urlencoded({
 
 const credentials = require('./credentials.json')
 clientApp.listen(5001, () => console.log('Backend server running on 5001'));
+const enrollUser = require('./enrollUser');
 
 
 
@@ -112,7 +113,7 @@ clientApp.post('/login', (req, res) => {
 });
 
 
-clientApp.post('/register', (req, res) => {
+clientApp.post('/register', async (req, res) => { // Add 'async' keyword to make the callback function asynchronous
   try {
     const { username, password, role, orgId } = req.body;
 
@@ -133,6 +134,8 @@ clientApp.post('/register', (req, res) => {
 
     const users = require('./credentials.json');
     const existingUser = Object.keys(users).find((key) => users[key].username === username);
+
+    await enrollUser(req.body.username); // Wait for user enrollment
 
     if (existingUser) {
       return res.status(409).json({ error: "Username already taken" });
@@ -192,14 +195,36 @@ clientApp.post('/updatePatientInfo', async (req, res) => {
   res.status(500).json({ error: "An error occurred" });
 }
 });
-
-
+clientApp.get('/readPatientData', async (req, res) => {
+  try {
+    const { id, patientId, orgId } = req.query;
+    const userObj = new User({ id, patientId, orgId });
+    const response = await app.readPatientData(userObj, true);
+    res.send(response);
+  } catch (error) {
+    res.status(500).json({ error: "An error occurred" });
+  }
+});
 
 
 clientApp.post('/readPatientData', async (req, res) => {
   try {
 	const patientObj = new User(req.body)
 	const response = await app.readPatientData(patientObj);
+	if (response.error) {
+    res.send(response.error);
+  } else {
+    res.send(response);
+  }
+} catch (error) {
+  res.status(500).json({ error: "An error occurred" });
+}
+});
+
+clientApp.post('/readDoctorData', async (req, res) => {
+  try {
+	const patientObj = new User(req.body)
+	const response = await app.readDoctorData(patientObj);
 	if (response.error) {
     res.send(response.error);
   } else {
@@ -318,28 +343,35 @@ clientApp.post('/revokeAccess', async (req, res) => {
 }
 });
 
+
+
 clientApp.post('/transferRecord', async (req, res) => {
-  const transferData = new User(req.body)
-
-
   try {
-    const result = await app.transferRecord(transferData);
-    if (result.error) {
-      res.send(result.error);
-    } else {
-      res.send(result);
-    }
-  } catch (error) {
-    res.status(500).send(error.message);
+	const userObj = new User(req.body)
+	const response = await app.transferRecord(userObj);
+	if (response.error) {
+    res.send(response.error);
+  } else {
+    res.send(response);
   }
+
+} catch (error) {
+  res.status(500).json({ error: "An error occurred" });
+}
 });
 
-clientApp.get('/approveTransfer', async (req, res) => {
-  const { patientId, doctorId } = new User(req.query)
+
+clientApp.post('/approveTransfer', async (req, res) => {
   try {
-      const result = await approveTransfer(patientId, doctorId);
-      res.send(JSON.stringify(result));
-  } catch (error) {
-      res.status(500).send(JSON.stringify({ error: error.message }));
+	const userObj = new User(req.body)
+	const response = await app.approveTransfer(userObj);
+	if (response.error) {
+    res.send(response.error);
+  } else {
+    res.send(response);
   }
+
+} catch (error) {
+  res.status(500).json({ error: "An error occurred" });
+}
 });

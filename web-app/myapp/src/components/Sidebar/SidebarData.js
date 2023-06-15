@@ -29,7 +29,24 @@ export const getSidebarData = (role) => {
         icon: <FaIcons.FaUserCircle />,
         cName: 'side-nav-text'
       },
-      
+      {
+        title: 'RegisterDoctor',
+        path: '/registerDoctor',
+        icon: <FaIcons.FaUserCircle />,
+        cName: 'side-nav-text'
+      },
+      {
+        title: 'TransferRecord',
+        path: '/transferRecord',
+        icon: <FaIcons.FaUserCircle />,
+        cName: 'side-nav-text'
+      },
+      {
+        title: 'ReadPatientData',
+        path: '/readPatientData',
+        icon: <FaIcons.FaUserCircle />,
+        cName: 'side-nav-text'
+      },
     );
     
   } else if (role === 'patient') {
@@ -55,6 +72,12 @@ export const getSidebarData = (role) => {
       {
         title: 'ReadAllPatientData',
         path: '/readAllPatientData',
+        icon: <FaIcons.FaUserCircle />,
+        cName: 'side-nav-text'
+      },
+      {
+        title: 'ApproveTransfer',
+        path: '/approveTransfer',
         icon: <FaIcons.FaUserCircle />,
         cName: 'side-nav-text'
       },

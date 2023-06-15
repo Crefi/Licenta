@@ -17,9 +17,17 @@ const Register = () => {
         role,
         orgId,
       });
+
+      try {
+        await axios.post(`/enrollUser`, { username });
+        console.log(`Successfully enrolled user ${username}`);
+      } catch (error) {
+        console.error(`Failed to enroll user ${username}: ${error}`);
+      }
       localStorage.setItem('token', response.data.accessToken);
       localStorage.setItem('role', response.data.rol);
       window.location.href = './Login'; // Replace with your dashboard page URL
+
     } catch (error) {
       alert('Unable to register, please try again');
     }
