@@ -1,16 +1,11 @@
 
-  .col-md-4 {
-    margin-left: 250px; /* Adjust the value to match the width of your sidebar */
-    padding: 20px; /* Add padding to create space between the sidebar and content */
-  }
-  .table-container {
-    margin-left: 250px; /* Adjust the value to match the width of your sidebar */
-    padding: 20px; /* Add padding to create space between the sidebar and content */
-  }
 
 
-  
-  .container h1,
-  .container p {
-    text-align: center;
+ 
+  .pages {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: linear-gradient(to bottom, #e0e0e0, #6fdee8);
+
   }

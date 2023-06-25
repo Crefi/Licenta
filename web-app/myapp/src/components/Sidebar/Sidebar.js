@@ -21,7 +21,10 @@ function Sidebar({ role }) {
             <FaIcons.FaBars onClick={showSidebar} />
           </Link>
         </div>
-        <nav className={sidebar ? 'side-nav-menu active' : 'side-nav-menu'}>
+        <nav
+          className={sidebar ? 'side-nav-menu active' : 'side-nav-menu'}
+          style={{ zIndex: sidebar ? '1' : 'unset' }} // Add this style
+        >
           <ul className='side-nav-menu-items' onClick={showSidebar}>
             <li className='side-navbar-toggle'>
               <Link to='#' className='side-menu-bars'>

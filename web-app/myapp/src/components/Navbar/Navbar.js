@@ -30,7 +30,7 @@ function Navbar() {
       <nav className="navbar">
         <div className="nav-container">
           <NavLink exact to="/" className="nav-logo">
-            UVT-Ehr
+            UVT-Med
             <i className="fas fa-code"></i>
           </NavLink>
 
@@ -62,6 +62,18 @@ function Navbar() {
               </>
             )}
 
+    <li className="nav-item">
+                  <NavLink
+                    exact
+                    to="/about"
+                    activeClassName="active"
+                    className="nav-links"
+                    onClick={handleClick}
+                  >
+                    About
+                  </NavLink>
+                </li>
+
             {!isLoggedIn && (
               <>
                 <li className="nav-item">
@@ -89,29 +101,7 @@ function Navbar() {
               </>
             )}
 
-            <li className="nav-item">
-              <NavLink
-                exact
-                to="/about"
-                activeClassName="active"
-                className="nav-links"
-                onClick={handleClick}
-              >
-                About
-              </NavLink>
-            </li>
-
-            <li className="nav-item">
-              <NavLink
-                exact
-                to="/contact"
-                activeClassName="active"
-                className="nav-links"
-                onClick={handleClick}
-              >
-                Contact Us
-              </NavLink>
-            </li>
+           
             {isLoggedIn && (
               <>
           <li className="nav-item">

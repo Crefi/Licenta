@@ -3,9 +3,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Login from './components/Login/Login';
 import Register from './components/Register/Register';
 import Home from './Pages/Home';
-import Contact from './Pages/Contact';
 import About from './Pages/About';
-// import RevokeAccess from './components/Patient/RevokeAccess';
 import GrantAccess from './components/Patient/GrantAccess';
 import ApproveTransfer from './components/Patient/ApproveTransfer';
 import Navbar from './components/Navbar/Navbar';
@@ -14,12 +12,15 @@ import RegisterPatient from './components/Admin/RegisterPatient';
 import AdminDashboard from './components/Admin/AdminDashboard';
 import PatientDashboard from './components/Patient/PatientDashboard';
 import DoctorDasboard from './components/Doctor/DoctorDashboard';
-import 'bootstrap/dist/css/bootstrap.min.css';
 import Sidebar from './components/Sidebar/Sidebar';
 import ReadAllPatientData from './components/Patient/ReadAllPatientData';
 import TransferRecord from './components/Doctor/TransferRecord';
 import RegisterDoctor from './components/Admin/RegisterDoctor';
-import ReadPaientData from './components/Doctor/ReadPatientData'
+import ReadPaientData from './components/Doctor/ReadPatientData';
+import UpdatePatientInfo from './components/Doctor/UpdatePatientInfo'
+
+import 'bootstrap/dist/css/bootstrap.min.css';
+
 
 const App = () => {
   return (
@@ -29,7 +30,6 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
@@ -44,6 +44,8 @@ const App = () => {
         <Route path="/doctor-dashboard/*" element={<DoctorDasboard />} />
         <Route path="/transferRecord" element={<TransferRecord />} />
         <Route path="/readPatientData" element={<ReadPaientData />} />
+        <Route path="/updatePatient" element={<UpdatePatientInfo />} />
+
 
         {/* Patient Routes */}
         <Route path="/patient-dashboard/*" element={<PatientDashboard />} />

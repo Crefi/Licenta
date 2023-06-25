@@ -1,44 +1,58 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Sidebar from '../Sidebar/Sidebar';
-import "./GetRecordHistory.css";
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import TableContainer from '@mui/material/TableContainer';
+import Table from '@mui/material/Table';
+import TableHead from '@mui/material/TableHead';
+import TableBody from '@mui/material/TableBody';
+import TableRow from '@mui/material/TableRow';
+import TableCell from '@mui/material/TableCell';
+import Paper from '@mui/material/Paper';
+import Alert from '@mui/material/Alert';
 
-function GetRecordHistory() {
-  const [patientId, setPatientId] = useState('');
+const GetRecordHistory = () => {
+  const patientId = localStorage.getItem('username');
   const [orgId, setOrg] = useState('');
   const [result, setResult] = useState([]);
   const [tableData, setTableData] = useState([]);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     try {
       const response = await axios.post('/getRecordHistory', {
-        id: "admin",
+        id: 'admin',
         patientId: patientId,
         orgId: orgId
       });
 
       setResult(response.data);
+      setError('');
     } catch (error) {
       console.error(error);
       setResult([]);
+      setError('Error retrieving records.');
     }
   };
 
   useEffect(() => {
     if (result.length > 0) {
       const data = result.map((record, index) => (
-        <tr key={index}>
-          <td>{record.PatientId}</td>
-          <td>{record.Address}</td>
-          <td>{record.Telephone}</td>
-          <td>{record.Diagnosis}</td>
-          <td>{record.Medication}</td>
-          <td>{record.DoctorAuthorizationList.join(', ')}</td>
-          <td>{record.OrganisationAuthorizationList.join(', ')}</td>
+        <TableRow key={index}>
+          <TableCell>{record.PatientId}</TableCell>
+          <TableCell>{record.Address}</TableCell>
+          <TableCell>{record.Telephone}</TableCell>
+          <TableCell>{record.Diagnosis}</TableCell>
+          <TableCell>{record.Medication}</TableCell>
+          <TableCell>{record.DoctorAuthorizationList.join(', ')}</TableCell>
+          <TableCell>{record.OrganisationAuthorizationList.join(', ')}</TableCell>
           {/* Add more columns as needed */}
-        </tr>
+        </TableRow>
       ));
       setTableData(data);
     }
@@ -47,43 +61,52 @@ function GetRecordHistory() {
   return (
     <div>
       <Sidebar role={localStorage.getItem('role')} />
-      <h2 className="h2-history">Get Record History</h2>
-      <form className="form-history" onSubmit={handleSubmit}>
-        <br />
-        <div className="form-group">
-          <label>Patient ID:</label>
-          <input className="form-control" type="text" value={patientId} onChange={(e) => setPatientId(e.target.value)} />
-        </div>
-        <br />
-        <div className="form-group">
-          <label>org:</label>
-          <input className="form-control" type="text" value={orgId} onChange={(e) => setOrg(e.target.value)} />
-        </div>
-        <br />
-        <button className="btn btn-primary" type="submit">Submit</button>
-      </form>
-      <br />
-      {tableData.length > 0 ? (
-        <table className="table table-bordered table-history">
-          <thead className="thead-dark">
-            <tr>
-              <th>PatientId</th>
-              <th>Address</th>
-              <th>Telephone ID</th>
-              <th>Diagnosis ID</th>
-              <th>Medication</th>
-              <th>DoctorAuthorizationList</th>
-              <th>OrganisationAuthorizationList</th>
-              {/* Add more column headers as needed */}
-            </tr>
-          </thead>
-          <tbody>{tableData}</tbody>
-        </table>
-      ) : (
-        <p>No records found.</p>
-      )}
+      <Box sx={{ marginLeft: '280px' }}>
+        <Typography variant="h6" component="h2" gutterBottom>
+          Get Record History
+        </Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '400px' }}>
+          <form onSubmit={handleSubmit}>
+            <TextField
+              label="Patient ID"
+              variant="outlined"
+              value={patientId}
+              disabled
+            />
+            <TextField
+              label="Org"
+              variant="outlined"
+              value={orgId}
+              onChange={(e) => setOrg(e.target.value)}
+            />
+            <Button variant="contained" type="submit">Submit</Button>
+          </form>
+        </Box>
+        {error && <Alert severity="error">{error}</Alert>}
+        {tableData.length > 0 ? (
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Patient ID</TableCell>
+                  <TableCell>Address</TableCell>
+                  <TableCell>Telephone ID</TableCell>
+                  <TableCell>Diagnosis ID</TableCell>
+                  <TableCell>Medication</TableCell>
+                  <TableCell>Doctor Authorization List</TableCell>
+                  <TableCell>Organisation Authorization List</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>{tableData}</TableBody>
+            </Table>
+          </TableContainer>
+        ) : (
+          <Typography variant="body1" component="div">
+          </Typography>
+        )}
+      </Box>
     </div>
   );
-}
+};
 
 export default GetRecordHistory;

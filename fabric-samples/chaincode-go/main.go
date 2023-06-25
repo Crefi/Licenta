@@ -3,7 +3,6 @@ package main
 import (
     "encoding/json"
     "fmt"
-    "strconv"
     "github.com/hyperledger/fabric-contract-api-go/contractapi"
   
 
@@ -463,6 +462,7 @@ func (rc *RecordContract) GetAllCounts(ctx contractapi.TransactionContextInterfa
 
 	doctorsCount := 0
 	patientsCount := 0
+	doctorNameSet := make(map[string]bool)
 
 	for resultsIterator.HasNext() {
 		result, err := resultsIterator.Next()
@@ -477,14 +477,17 @@ func (rc *RecordContract) GetAllCounts(ctx contractapi.TransactionContextInterfa
 		}
 
 		// Count doctors
-        doctorsCount += len(record.DoctorAuthorizationList)
+		for _, doctorName := range record.DoctorAuthorizationList {
+			if _, ok := doctorNameSet[doctorName]; !ok {
+				doctorsCount++
+				doctorNameSet[doctorName] = true
+			}
+		}
 
 		// Count patients
 		if record.PatientId != "" {
 			patientsCount++
 		}
-
-	
 	}
 
 	counts := map[string]int{
@@ -498,61 +501,35 @@ func (rc *RecordContract) GetAllCounts(ctx contractapi.TransactionContextInterfa
 
 
 
-func (rc *RecordContract) UpdatePatientInfo(ctx contractapi.TransactionContextInterface, userObj string) (string, error) {
-    var err error
-    var updatedRecordJSON []byte
 
-    // Parse userObj to get patientId, address and telephone
-    var user map[string]interface{}
-    err = json.Unmarshal([]byte(userObj), &user)
-    if err != nil {
-        return "", err
-    }
+// DeletePatientRecord deletes a patient record from the ledger
+func (rc *RecordContract) DeletePatientRecord(ctx contractapi.TransactionContextInterface, userObjJSON string) error {
+	// Parse the userObjJSON into a struct
+	userObj := struct {
+		PatientId string `json:"patientId"`
+	}{}
+	err := json.Unmarshal([]byte(userObjJSON), &userObj)
+	if err != nil {
+		return fmt.Errorf("Failed to parse userObjJSON: %v", err)
+	}
 
-    patientId := user["patientId"].(string)
-    address := user["address"].(string)
-    telephone, err := strconv.Atoi(user["telephone"].(string))
-    if err != nil {
-        return "", err
-    }
+	// Check if the patient record exists
+	recordJSON, err := ctx.GetStub().GetState(userObj.PatientId)
+	if err != nil {
+		return fmt.Errorf("Failed to read from world state: %v", err)
+	}
+	if recordJSON == nil {
+		return fmt.Errorf("The Record %s does not exist", userObj.PatientId)
+	}
 
-    // Get state from the ledger
-    recordJSON, err := ctx.GetStub().GetState(patientId)
-    if err != nil {
-        return "", fmt.Errorf("Failed to read from world state: %v", err)
-    }
+	// Delete the patient record
+	err = ctx.GetStub().DelState(userObj.PatientId)
+	if err != nil {
+		return fmt.Errorf("Failed to delete from world state: %v", err)
+	}
 
-    if recordJSON == nil {
-        return "", fmt.Errorf("The Record %s does not exist", patientId)
-    }
-
-    // Parse recordJSON to get the existing record
-    var existingRecord map[string]interface{}
-    err = json.Unmarshal(recordJSON, &existingRecord)
-    if err != nil {
-        return "", err
-    }
-
-    // Update the existing record
-    existingRecord["Address"] = address
-    existingRecord["Telephone"] = telephone
-
-    // Put the updated record back in the ledger
-    updatedRecordJSON, err = json.Marshal(existingRecord)
-    if err != nil {
-        return "", err
-    }
-
-    err = ctx.GetStub().PutState(patientId, updatedRecordJSON)
-    if err != nil {
-        return "", fmt.Errorf("Failed to write to world state. %v", err)
-    }
-
-    return string(updatedRecordJSON), nil
+	return nil
 }
-
-
-
 // RevokeAccess removes the authorization of a doctor from accessing a patient's record.
 func (rc *RecordContract) RevokeAccess(ctx contractapi.TransactionContextInterface, userObjJSON string) error {
 	// Parse the incoming JSON data into a struct that we can use

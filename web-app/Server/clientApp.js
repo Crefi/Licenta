@@ -181,7 +181,7 @@ clientApp.post('/registerPatient', async (req, res) => {
 });
 
 
-clientApp.post('/updatePatientInfo', async (req, res) => {
+clientApp.put('/updatePatientInfo', async (req, res) => {
   try {
 	const patientObj = new User(req.body)
 	const response = await app.updatePatientInfo(patientObj)
@@ -365,6 +365,21 @@ clientApp.post('/approveTransfer', async (req, res) => {
   try {
 	const userObj = new User(req.body)
 	const response = await app.approveTransfer(userObj);
+	if (response.error) {
+    res.send(response.error);
+  } else {
+    res.send(response);
+  }
+
+} catch (error) {
+  res.status(500).json({ error: "An error occurred" });
+}
+});
+
+clientApp.delete('/deletePatient', async (req, res) => {
+  try {
+	const patientObj = new User(req.body)
+	const response = await app.deletePatient(patientObj);
 	if (response.error) {
     res.send(response.error);
   } else {

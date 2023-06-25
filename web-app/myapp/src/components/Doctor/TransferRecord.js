@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Alert from '@mui/material/Alert';
 import Sidebar from '../Sidebar/Sidebar';
 
-function TransferRecord() {
+const TransferRecord = () => {
   const [patientId, setPatientId] = useState('');
   const [newDoctorId, setNewDoctorId] = useState('');
   const [transferResult, setTransferResult] = useState('');
@@ -11,8 +16,8 @@ function TransferRecord() {
     try {
       const response = await axios.post('/transferRecord', {
         id: 'admin',
-        patientId: patientId,
-        newDoctorId: newDoctorId,
+        patientId,
+        newDoctorId,
         orgId: 'Hospital1',
       });
 
@@ -29,37 +34,37 @@ function TransferRecord() {
   return (
     <div>
       <Sidebar role={localStorage.getItem('role')} />
-      <div className="container">
-        <h2>Transfer Record</h2>
-        <div className="form-group">
-          <label>Patient ID:</label>
-          <input
-            type="text"
-            className="form-control"
+      <Box sx={{ marginLeft: '280px' }}>
+        <Typography variant="h6" component="h2" gutterBottom>
+          Transfer Record
+        </Typography>
+        <Box component="div">
+          <TextField
+            label="Patient ID"
+            variant="outlined"
+            fullWidth
             value={patientId}
-            onChange={(e) => setPatientId(e.target.value)}
+            onChange={(event) => setPatientId(event.target.value)}
+            sx={{ marginBottom: '16px' }}
           />
-        </div>
-        <div className="form-group">
-          <label>New Doctor ID:</label>
-          <input
-            type="text"
-            className="form-control"
+          <TextField
+            label="New Doctor ID"
+            variant="outlined"
+            fullWidth
             value={newDoctorId}
-            onChange={(e) => setNewDoctorId(e.target.value)}
+            onChange={(event) => setNewDoctorId(event.target.value)}
+            sx={{ marginBottom: '16px' }}
           />
-        </div>
-        <div className="button-container">
-          <button className="btn btn-primary" onClick={handleTransferRecord}>
+          <Button variant="contained" onClick={handleTransferRecord} sx={{ marginBottom: '16px' }}>
             Transfer Record
-          </button>
-        </div>
-        <div className="result-container">
-          {transferResult && <p>{transferResult}</p>}
-        </div>
-      </div>
+          </Button>
+        </Box>
+        <Box component="div">
+          {transferResult && <Alert severity="success">{transferResult}</Alert>}
+        </Box>
+      </Box>
     </div>
   );
-}
+};
 
 export default TransferRecord;

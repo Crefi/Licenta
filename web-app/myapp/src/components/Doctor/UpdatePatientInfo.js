@@ -13,10 +13,14 @@ import TableCell from '@mui/material/TableCell';
 import Alert from '@mui/material/Alert';
 import Sidebar from '../Sidebar/Sidebar';
 
-const ReadPatientData = () => {
+const UpdatePatientInfo = () => {
   const [patientId, setPatientId] = useState('');
   const [hospitalId, setHospitalId] = useState('');
-
+  const [address, setAddress] = useState('');
+  const [telephone, setTelephone] = useState('');
+  const [diagnosis, setDiagnosis] = useState('');
+  const [medication, setMedication] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [result, setResult] = useState({});
   const [tableData, setTableData] = useState([]);
   const [submitted, setSubmitted] = useState(false);
@@ -27,29 +31,36 @@ const ReadPatientData = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setSubmitted(true);
-
+  
     try {
-      const response = await axios.post('/readPatientData', {
+      const response = await axios.put('/updatePatientInfo', {
         id: 'admin',
         patientId,
         orgId: hospitalId,
+        address,
+        telephone,
+        diagnosis,
+        medication,
+        doctorId,
       });
-
+  
       setResult(response.data);
+      setSuccessMessage('Patient information updated successfully!');
+  
+      if (doctorId && response.data.DoctorAuthorizationList && !response.data.DoctorAuthorizationList.includes(doctorId)) {
+        setResult({});
+        setErrorMessage('Invalid doctor ID. Please ask the patient to grant you access.');
+        return;
+      }
     } catch (error) {
       console.error(error);
       setResult({});
+      setErrorMessage('An error occurred while updating patient information.');
     }
   };
+  
 
-  useEffect(() => {
-    if (doctorId && result.DoctorAuthorizationList && !result.DoctorAuthorizationList.includes(doctorId)) {
-      setErrorMessage('Invalid doctor ID, Please Ask the patient to grant you access');
-    } else {
-      setErrorMessage('');
-    }
-  }, [doctorId, result]);
-
+ 
   useEffect(() => {
     if (Object.keys(result).length > 0) {
       const data = [
@@ -79,7 +90,7 @@ const ReadPatientData = () => {
       <Sidebar role={localStorage.getItem('role')} />
       <Box sx={{ marginLeft: '280px' }}>
         <Typography variant="h6" component="h2" gutterBottom>
-          Get Patient Data
+          Update Patient Data
         </Typography>
         <Box component="form" onSubmit={handleSubmit}>
           <TextField
@@ -91,6 +102,14 @@ const ReadPatientData = () => {
             sx={{ marginBottom: '16px' }}
           />
           <TextField
+            label="Doctor ID"
+            variant="outlined"
+            fullWidth
+            value={doctorId}
+            disabled
+            sx={{ marginBottom: '16px' }}
+          />
+          <TextField
             label="Hospital Name"
             variant="outlined"
             fullWidth
@@ -98,11 +117,44 @@ const ReadPatientData = () => {
             onChange={(e) => setHospitalId(e.target.value)}
             sx={{ marginBottom: '16px' }}
           />
+          <TextField
+            label="Address"
+            variant="outlined"
+            fullWidth
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+            sx={{ marginBottom: '16px' }}
+          />
+          <TextField
+            label="Telephone"
+            variant="outlined"
+            fullWidth
+            value={telephone}
+            onChange={(event) => setTelephone(event.target.value)}
+            sx={{ marginBottom: '16px' }}
+          />
+          <TextField
+            label="Diagnosis"
+            variant="outlined"
+            fullWidth
+            value={diagnosis}
+            onChange={(event) => setDiagnosis(event.target.value)}
+            sx={{ marginBottom: '16px' }}
+          />
+          <TextField
+            label="Medication"
+            variant="outlined"
+            fullWidth
+            value={medication}
+            onChange={(event) => setMedication(event.target.value)}
+            sx={{ marginBottom: '16px' }}
+          />
           <Button variant="contained" type="submit" sx={{ marginBottom: '16px' }}>
             Submit
           </Button>
         </Box>
         {submitted && errorMessage && <Alert severity="error">{errorMessage}</Alert>}
+        {submitted && successMessage && <Alert severity="success">{successMessage}</Alert>}
         {submitted && tableData.length > 0 && !errorMessage ? (
           <TableContainer>
             <Table>
@@ -128,4 +180,4 @@ const ReadPatientData = () => {
   );
 };
 
-export default ReadPatientData;
+export default UpdatePatientInfo;

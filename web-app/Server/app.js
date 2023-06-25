@@ -105,10 +105,19 @@ async function registerPatient(patientObj) {
     throw new Error(`Failed to register patient ${patientObj.id}: ${error}`)
   }
 }
+async function deletePatient(patientObj) {
+  try {
+    const result = await submitTransaction('DeletePatientRecord', patientObj)
+    return result
+  } catch (error) {
+    console.error(`\DeletePatientRecord() --> Failed to delete patient ${patientObj.id}: ${error}`)
+    throw new Error(`Failed to delete patient ${patientObj.id}: ${error}`)
+  }
+}
 
 async function updatePatientInfo(userObj) {
   try {
-    const result = await submitTransaction('UpdatePatientInfo', userObj)
+    const result = await submitTransaction('UpdateRecord', userObj)
     return result
   } catch (error) {
     console.error(`\n updatePatientData() --> Failed to update the record: ${error}`)
@@ -274,6 +283,7 @@ module.exports = {
   transferRecord,
   approveTransfer,
   readDoctorData,
+  deletePatient,
   revokeAccess
 }
 
